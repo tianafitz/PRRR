@@ -1,3 +1,5 @@
+# Alternating Minimization algorithm as referenced in Qian et al “Large-scale sparse regression for multiple responses with applications to uk biobank"
+
 library(pracma)
 a <- pracma::rand(n = 8, m = 1)
 b <- pracma::rand(n = 200, m = 1)
