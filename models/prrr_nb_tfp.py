@@ -17,7 +17,6 @@ from scipy.stats import multivariate_normal
 
 tf.enable_v2_behavior()
 
-plt.style.use("ggplot")
 warnings.filterwarnings('ignore')
 
 NUM_VI_ITERS = 300
@@ -46,6 +45,7 @@ def fit_rrr(X, Y, k):
 
     assert X.shape[0] == Y.shape[0]
     n, p = X.shape
+    _, q = Y.shape
 
     # ------- Specify model ---------
 
@@ -87,11 +87,11 @@ def fit_rrr(X, Y, k):
 
     return_dict = {
     'loss_trace': losses,
+    'A_concentration': qA_concentration,
+    'A_rate': qA_rate,
+    'B_concentration': qB_concentration,
+    'B_rate': qB_rate,
     }
-
-    # plt.scatter(A_true[:, 0], qA_mean.numpy()[:, 0])
-    # plt.show()
-    # import ipdb; ipdb.set_trace()
 
     return return_dict
 
