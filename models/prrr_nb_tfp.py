@@ -59,19 +59,35 @@ def fit_rrr(X, Y, k):
 
     # Variational parmater means
     
-    qA_concentration = tf.fill([p, k], 2.0)
-    qA_rate = tfp.util.TransformedVariable(tf.ones([p, k]), bijector=tfb.Softplus())
+    # qA_concentration = tf.fill([p, k], 2.0)
+    # qA_rate = tfp.util.TransformedVariable(tf.ones([p, k]), bijector=tfb.Softplus())
     
-    qB_concentration = tf.fill([k, q], 2.0)
-    qB_rate = tfp.util.TransformedVariable(tf.ones([k, q]), bijector=tfb.Softplus())
+    # qB_concentration = tf.fill([k, q], 2.0)
+    # qB_rate = tfp.util.TransformedVariable(tf.ones([k, q]), bijector=tfb.Softplus())
+
+    qA_mean = tf.Variable(tf.random.normal([p, k]))
+    qA_stddv = tfp.util.TransformedVariable(
+      1e-4 * tf.ones([p, k]),
+      bijector=tfb.Softplus())
+
+    qB_mean = tf.Variable(tf.random.normal([k, q]))
+    qB_stddv = tfp.util.TransformedVariable(
+      1e-4 * tf.ones([k, q]),
+      bijector=tfb.Softplus())
     
     def factored_normal_variational_model():
-      qA = yield tfd.Gamma(concentration=qA_concentration,
-                           rate=qA_rate,
-                            name="qA")
-      qB = yield tfd.Gamma(concentration=qB_concentration,
-                           rate=qB_rate,
-                            name="qB")
+      # qA = yield tfd.Gamma(concentration=qA_concentration,
+      #                      rate=qA_rate,
+      #                       name="qA")
+      # qB = yield tfd.Gamma(concentration=qB_concentration,
+      #                      rate=qB_rate,
+      #                       name="qB")
+      qA = yield tfd.LogNormal(loc=qA_mean,
+                               scale=qA_stddv,
+                               name="qA")
+      qB = yield tfd.LogNormal(loc=qB_mean,
+                           scale=qB_stddv,
+                           name="qB")
 
     # Surrogate posterior that we will try to make close to p
     surrogate_posterior = tfd.JointDistributionCoroutineAutoBatched(
@@ -87,10 +103,10 @@ def fit_rrr(X, Y, k):
 
     return_dict = {
     'loss_trace': losses,
-    'A_concentration': qA_concentration,
-    'A_rate': qA_rate,
-    'B_concentration': qB_concentration,
-    'B_rate': qB_rate,
+    'A_mean': qA_mean,
+    'A_stddev': qA_stddv,
+    'B_mean': qB_mean,
+    'B_stddev': qB_stddv,
     }
 
     return return_dict
