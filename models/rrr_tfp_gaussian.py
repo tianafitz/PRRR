@@ -88,14 +88,10 @@ def fit_rrr(X, Y, k):
         num_steps=NUM_VI_ITERS)
 
     return_dict = {
-    'loss_trace': losses,
-    'A_mean': qA_mean,
-    'B_mean': qB_mean
+      'loss_trace': losses,
+      'A_mean': qA_mean,
+      'B_mean': qB_mean
     }
-
-    # plt.scatter(A_true[:, 0], qA_mean.numpy()[:, 0])
-    # plt.show()
-    # import ipdb; ipdb.set_trace()
 
     return return_dict
 
