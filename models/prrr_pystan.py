@@ -56,9 +56,9 @@ generated quantities {
 """
 
 # Simulated Data
-n = 500 # number of samples
-p = 8 # number of cell types
-q = 20 # number of genes
+n = 500  # number of samples
+p = 8  # number of cell types
+q = 20  # number of genes
 real_r = 5
 n_iter = 100
 
@@ -80,58 +80,67 @@ test_ranks = [1, 2, 3, 4, 5, 6, 10, 20]
 all_ll = []
 
 # PBMC DATA
-'''X_sim = pd.read_csv('pbmcX.csv').to_numpy()
+"""X_sim = pd.read_csv('pbmcX.csv').to_numpy()
 Y_sim = pd.read_csv('pbmcY.csv').to_numpy()
 n = 2700
 p = 9
 q = 200
-n_iter = 100'''
+n_iter = 100"""
 
 for r in test_ranks:
     cur_ll = []
-    
+
     for i in range(5):
-        
-        train_idx, test_idx = train_test_split(np.arange(n), test_size=0.25, random_state=42)
+
+        train_idx, test_idx = train_test_split(
+            np.arange(n), test_size=0.25, random_state=42
+        )
         Y_train, Y_test = Y_sim[train_idx, :], Y_sim[test_idx, :]
         X_train, X_test = X_sim[train_idx, :], X_sim[test_idx, :]
         n_train, n_test = train_idx.shape[0], test_idx.shape[0]
-        
+
         # Format data for Stan model
-        dat = {'N': n_train, 'N_test': n_test, 'P': p, 'Q': q, "R": r, 
-               'X': X_train, 'X_test': X_test, 'Y': Y_train, 'Y_test': Y_test}
+        dat = {
+            "N": n_train,
+            "N_test": n_test,
+            "P": p,
+            "Q": q,
+            "R": r,
+            "X": X_train,
+            "X_test": X_test,
+            "Y": Y_train,
+            "Y_test": Y_test,
+        }
         sm = pystan.StanModel(model_code=model_code)
         # Fit Stan model
         fit = sm.sampling(data=dat, iter=n_iter)
         # Look at model coefficients
-        A_est = np.mean(fit.extract()['A'], axis=0)
-        B_est = np.mean(fit.extract()['B'], axis=0)
-        
+        A_est = np.mean(fit.extract()["A"], axis=0)
+        B_est = np.mean(fit.extract()["B"], axis=0)
+
         sns.heatmap(A_est @ B_est)
         plt.title("Sampled Parameters")
-        plt.xlabel('gene')
-        plt.ylabel('cluster')
+        plt.xlabel("gene")
+        plt.ylabel("cluster")
         plt.figure()
-            
+
         # Compute log-likelihood of test data
         def test_ll(sample_mat):
-        	# Sample mat is (# samples x # datapoints x # features)
-        	S = sample_mat.shape[0] # Number of samples
-        	LL_mat = np.sum(sample_mat, axis=2) # sum over genes (independent)
-        	LL_mat_per_sample = logsumexp(LL_mat, axis=0) - np.log(S)
-        	return LL_mat_per_sample
-        
-        log_likelihood_per_cell = test_ll(fit.extract()['ll'])
-        LL = np.mean(log_likelihood_per_cell)  
+            # Sample mat is (# samples x # datapoints x # features)
+            S = sample_mat.shape[0]  # Number of samples
+            LL_mat = np.sum(sample_mat, axis=2)  # sum over genes (independent)
+            LL_mat_per_sample = logsumexp(LL_mat, axis=0) - np.log(S)
+            return LL_mat_per_sample
+
+        log_likelihood_per_cell = test_ll(fit.extract()["ll"])
+        LL = np.mean(log_likelihood_per_cell)
         cur_ll.append(LL)
     all_ll.append(cur_ll)
 
 plot_ll = np.mean(all_ll, axis=1)
-plt.xlabel('Rank for RRR')
-plt.ylabel('Average Log Likelihood')
-plt.title('RRR on PMBC Data')
+plt.xlabel("Rank for RRR")
+plt.ylabel("Average Log Likelihood")
+plt.title("RRR on PMBC Data")
 plt.plot(test_ranks, plot_ll)
-plt.title('Sampled Parameters')
+plt.title("Sampled Parameters")
 sns.heatmap(A_est @ B_est)
-    
-    
