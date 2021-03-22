@@ -3,15 +3,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import sys
+
 sys.path.append("../../models")
 from prrr_nb_tfp import fit_rrr
 from rrr_tfp_gaussian import fit_rrr as fit_rrr_gaussian
 from sklearn.model_selection import train_test_split
 
 import matplotlib
-font = {'size': 25}
-matplotlib.rc('font', **font)
-matplotlib.rcParams['text.usetex'] = True
+
+font = {"size": 25}
+matplotlib.rc("font", **font)
+matplotlib.rcParams["text.usetex"] = True
 
 
 def abline(slope, intercept, label=None, color="red"):
@@ -20,6 +22,7 @@ def abline(slope, intercept, label=None, color="red"):
     x_vals = np.array(axes.get_xlim())
     y_vals = intercept + slope * x_vals
     plt.plot(x_vals, y_vals, "--", color=color, label=label, linewidth=5)
+
 
 ## Generate data
 n = 200
@@ -37,23 +40,25 @@ Y = np.random.normal(z @ B.T)
 rrr_results = fit_rrr_gaussian(X=X, Y=Y, k=k)
 
 ## Extract parameters
-A_est = rrr_results['A_mean'].numpy()
-B_est = rrr_results['B_mean'].numpy()
+A_est = rrr_results["A_mean"].numpy()
+B_est = rrr_results["B_mean"].numpy()
 
 # import ipdb; ipdb.set_trace()
 ## Plot
-f, (a1, a2, a3) = plt.subplots(1, 3, gridspec_kw={'width_ratios': [1.25, 1, 1.25]}, figsize=(19, 6))
+f, (a1, a2, a3) = plt.subplots(
+    1, 3, gridspec_kw={"width_ratios": [1.25, 1, 1.25]}, figsize=(19, 6)
+)
 
 # subplot 1
 plt.sca(a1)
 plt.scatter(X[:, 0], X[:, 1], c=np.mean(Y, axis=1))
 cbar = plt.colorbar()
-cbar.set_label('Gene 1 + gene 2', rotation=270, size=20, labelpad=15)
+cbar.set_label("Gene 1 + gene 2", rotation=270, size=20, labelpad=15)
 cbar.ax.tick_params(labelsize=10)
 plt.xlabel("Cell covariate 1")
 plt.ylabel("Cell covariate 2")
 ax = plt.gca()
-ax.text(-0.1, 1.0, "A", transform=ax.transAxes, size=20, weight='bold')
+ax.text(-0.1, 1.0, "A", transform=ax.transAxes, size=20, weight="bold")
 plt.title(r"$X$")
 plt.xticks([])
 plt.yticks([])
@@ -62,9 +67,9 @@ plt.yticks([])
 plt.sca(a2)
 plt.scatter(X[:, 0], X[:, 1], c=np.mean(Y, axis=1))
 abline(A_est[1, 0] / A_est[0, 0], intercept=0, label="A")
-plt.legend(prop={'size': 20})
+plt.legend(prop={"size": 20})
 ax = plt.gca()
-ax.text(-0.1, 1.0, "B", transform=ax.transAxes, size=20, weight='bold')
+ax.text(-0.1, 1.0, "B", transform=ax.transAxes, size=20, weight="bold")
 plt.title(r"$X$")
 plt.xticks([])
 plt.yticks([])
@@ -75,12 +80,12 @@ plt.ylabel("Cell covariate 2")
 plt.sca(a3)
 plt.scatter(Y[:, 0], Y[:, 1], c=np.squeeze(X @ A_est))
 cbar = plt.colorbar()
-cbar.set_label(r'Latent projection $XA$', rotation=270, size=20, labelpad=15)
+cbar.set_label(r"Latent projection $XA$", rotation=270, size=20, labelpad=15)
 cbar.ax.tick_params(labelsize=10)
 abline(B_est[0, 1] / B_est[0, 0], intercept=0, label="B", color="green")
-plt.legend(prop={'size': 20})
+plt.legend(prop={"size": 20})
 ax = plt.gca()
-ax.text(-0.1, 1.0, "C", transform=ax.transAxes, size=20, weight='bold')
+ax.text(-0.1, 1.0, "C", transform=ax.transAxes, size=20, weight="bold")
 plt.title(r"$Y$")
 plt.xticks([])
 plt.yticks([])
@@ -89,7 +94,9 @@ plt.ylabel("Gene 2")
 plt.suptitle(r"$Y=XAB+\epsilon$", y=0.98)
 plt.tight_layout()
 plt.savefig("../../figures/paper_figures/figure1.png")
-plt.savefig("../../figures/paper_figures/figure1.pdf", bbox_inches='tight')
+plt.savefig("../../figures/paper_figures/figure1.pdf", bbox_inches="tight")
 plt.show()
 
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()

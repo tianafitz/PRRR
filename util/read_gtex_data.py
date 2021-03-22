@@ -16,4 +16,6 @@ v8_metadata = pd.read_table(METADATA_PATH)
 # The SAMPID column contains the sample IDs in the metadata
 # Join the expression data's index and the metadata's SAMPID column to get paired samples
 
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
