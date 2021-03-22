@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from os.path import join as pjoin
 import sys
-sys.path.append("../models")
+sys.path.append("../../models")
 from prrr_nb_tfp import fit_rrr
 from rrr_tfp_gaussian import fit_rrr as fit_rrr_gaussian
 from sklearn.model_selection import train_test_split
@@ -17,9 +18,10 @@ matplotlib.rcParams['text.usetex'] = True
 
 
 num_repeats = 5
+FIGURE_DIR = "../../figures/plots/"
 
 ## Get error for varying values of n
-n_list = [20, 50, 100]
+n_list = [10, 20, 50]
 q_list = [10, 50, 100]
 
 
@@ -60,7 +62,7 @@ def test_rrr_gaussian_varyn():
 	plt.ylabel(r'$\|\widehat{A} \widehat{B}-A^\star B^\star\|_2$')
 	plt.title("Gaussian RRR")
 	plt.tight_layout()
-	plt.savefig("../figures/plots/rrr_gaussian_MSE_varyn.png")
+	plt.savefig(pjoin(FIGURE_DIR, "rrr_gaussian_MSE_varyn.png"))
 	plt.show()
 
 def test_rrr_poisson_varyn():
@@ -106,7 +108,8 @@ def test_rrr_poisson_varyn():
 	plt.ylabel(r'$\|\widehat{A} \widehat{B}-A^\star B^\star\|_2$')
 	plt.title("PRRR")
 	plt.tight_layout()
-	plt.savefig("../figures/plots/rrr_poisson_MSE_varyn.png")
+	plt.savefig(pjoin(FIGURE_DIR, "rrr_poisson_MSE_varyn.png"))
+	plt.savefig("../../figures/paper_figures/figure2.pdf", bbox_inches='tight')
 	plt.show()
 
 def test_rrr_poisson_varyq():
@@ -153,15 +156,15 @@ def test_rrr_poisson_varyq():
 	plt.ylabel(r'$\|\widehat{A} \widehat{B}-A^\star B^\star\|_2$')
 	plt.title("PRRR")
 	plt.tight_layout()
-	plt.savefig("../figures/plots/rrr_poisson_MSE_varyq.png")
+	plt.savefig(pjoin(FIGURE_DIR, "rrr_poisson_MSE_varyq.png"))
 	plt.show()
 
 
 if __name__ == "__main__":
 
 	# test_rrr_gaussian_varyn()
-	# test_rrr_poisson_varyn()
-	test_rrr_poisson_varyq()
+	test_rrr_poisson_varyn()
+	# test_rrr_poisson_varyq()
 
 
 

@@ -51,6 +51,8 @@ cnt = Counter(sub)
 meta = pd.read_csv('../data/meta.csv', index_col=0)
 meta = clean(meta)
 
+# meta = meta[["HGHT", "WGHT", "SEX_1"]]
+
 
 rrr_results = fit_rrr(Y=expression_data, X=meta, k=5)
 A_lognormal_mean = rrr_results['A_mean'].numpy()
@@ -63,3 +65,14 @@ B_est = np.exp(B_lognormal_mean + 0.5 * B_stddev**2)
 AB_est = A_est @ B_est
 
 sns.heatmap(AB_est)
+plt.show()
+
+sex_associated_genes = AB_est[2, :]
+plt.scatter(np.arange(len(sex_associated_genes)), -np.sort(-sex_associated_genes))
+plt.show()
+
+plt.scatter(np.arange(A_est.shape[0]), -np.sort(-A_est[:, 0]))
+plt.xlabel("Metadata variable index")
+plt.ylabel("Component enrichment")
+plt.show()
+import ipdb; ipdb.set_trace()
