@@ -4,4 +4,4 @@ __pycache__/
 *.gct
 !/data/
 /data/*
-!/data/gtex_expression_Thyroid_clean.csv
+# !/data/gtex_expression_Thyroid_clean.csv
