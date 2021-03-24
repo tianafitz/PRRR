@@ -2,4 +2,6 @@
 __pycache__/
 *.csv
 *.gct
-!gtex_expression_Thyroid_clean.csv
+!/data/
+/data/*
+!/data/gtex_expression_Thyroid_clean.csv
