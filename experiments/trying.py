@@ -32,7 +32,7 @@ def clean(df):
     return df
 
 
-EXPRESSION_FILE = "../data/gtex_expression_thyroid.csv"
+EXPRESSION_FILE = "../data/gtex_expression_Thyroid_clean.csv"
 METADATA_PATH = (
     "../data/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
 )
@@ -47,18 +47,22 @@ expression_data = pd.read_csv(EXPRESSION_FILE, index_col=0)
 v8_metadata = pd.read_table(METADATA_PATH)
 
 sub = [x[0:10] for x in expression_data.index]
+for i in range(len(sub)):
+    if sub[i][9] == '-':
+        sub[i] = sub[i][:-1]
+
 cnt = Counter(sub)
-# meta = pd.DataFrame(columns = v8_metadata.columns)
+meta = pd.DataFrame(columns = v8_metadata.columns)
 
-# for x in cnt:
-# df_try  = v8_metadata[v8_metadata['SUBJID'] == x]
-# meta = meta.append([df_try]*cnt[x], ignore_index=True)
-# meta  =  pd.get_dummies(meta)
+for x in cnt:
+    df_try  = v8_metadata[v8_metadata['SUBJID'] == x]
+    meta = meta.append([df_try]*cnt[x], ignore_index=True)
+meta  =  pd.get_dummies(meta)
 
-meta = pd.read_csv("../data/meta.csv", index_col=0)
+#meta = pd.read_csv("../data/meta.csv", index_col=0)
 meta = clean(meta)
 
-# meta = meta[["HGHT", "WGHT", "SEX_1"]]
+#meta = meta[["HGHT", "WGHT", "BMI", "TRDNISCH"]]
 
 
 rrr_results = fit_rrr(Y=expression_data, X=meta, k=5)
@@ -74,7 +78,7 @@ AB_est = A_est @ B_est
 sns.heatmap(AB_est)
 plt.show()
 
-sex_associated_genes = AB_est[2, :]
+sex_associated_genes = AB_est[0, :]
 plt.scatter(np.arange(len(sex_associated_genes)), -np.sort(-sex_associated_genes))
 plt.show()
 
