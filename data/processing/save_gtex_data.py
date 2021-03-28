@@ -44,7 +44,7 @@ def main():
 	expression_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in expression_ids])
 	# assert np.all(np.unique(expression_sample_ids, return_counts=True)[1] == 1)
 
-	for curr_tissue in all_tissues[:3]:
+	for curr_tissue in all_tissues[:10]:
 
 		print("Loading {}...".format(curr_tissue))
 		tissue_sample_metadata = sample_metadata[sample_metadata.SMTSD == curr_tissue]
