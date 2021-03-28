@@ -29,6 +29,7 @@ def clean(df):
         ):  # no variance -- extereme case that captures also strings
             df.drop(x, axis=1, inplace=True)
     len(df.columns)
+    df = df.fillna(0.0)
     return df
 
 
@@ -65,6 +66,19 @@ meta = clean(meta)
 #meta = meta[["HGHT", "WGHT", "BMI", "TRDNISCH"]]
 
 
+# Cast to integers
+expression_data = expression_data.values.astype(int)
+
+# Drop columns with zero variance
+col_variances = np.var(meta.values, 0)
+nonzero_variance_cols = meta.columns.values[np.where(col_variances > 0)[0]]
+meta = meta[nonzero_variance_cols]
+
+# Remove columns with negative values
+nonnegative_columns = np.where(np.sum(meta < 0, 0) == 0)[0]
+meta = meta.values[:, nonnegative_columns]
+
+# Fit model
 rrr_results = fit_rrr(Y=expression_data, X=meta, k=5)
 A_lognormal_mean = rrr_results["A_mean"].numpy()
 A_stddev = rrr_results["A_stddev"].numpy()
@@ -87,5 +101,4 @@ plt.xlabel("Metadata variable index")
 plt.ylabel("Component enrichment")
 plt.show()
 import ipdb
-
 ipdb.set_trace()
