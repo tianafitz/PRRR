@@ -17,7 +17,7 @@ SUBJECT_METADATA_PATH = "../GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPheno
 SAMPLE_METADATA_PATH = "../GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt"
 
 NUM_GENES = 2000
-TISSUE = "Thyroid"
+# TISSUE = "Thyroid"
 
 def main():
 
@@ -32,6 +32,8 @@ def main():
 	sample_metadata['SUBJID'] = metadata_subject_ids
 	assert len(subject_metadata.SUBJID.value_counts().unique()) == 1
 
+	all_tissues = sample_metadata.SMTSD.unique()
+
 	# ------- Load expression ---------
 	# Get sample names of expression data
 	expression_ids = pd.read_table(
@@ -42,26 +44,29 @@ def main():
 	expression_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in expression_ids])
 	# assert np.all(np.unique(expression_sample_ids, return_counts=True)[1] == 1)
 
-	tissue_sample_metadata = sample_metadata[sample_metadata.SMTSD == TISSUE]
+	for curr_tissue in all_tissues[:3]:
 
-	# Drop duplicate samples for the same subject
-	tissue_sample_metadata = tissue_sample_metadata.drop_duplicates(subset="SUBJID")
-	assert len(tissue_sample_metadata.SUBJID.value_counts().unique()) == 1
-	tissue_idx = np.where(np.isin(expression_sample_ids, tissue_sample_metadata.SAMPID.values))[0]
-	assert np.all(np.unique(expression_sample_ids[tissue_idx], return_counts=True)[1] == 1)
-	
+		print("Loading {}...".format(curr_tissue))
+		tissue_sample_metadata = sample_metadata[sample_metadata.SMTSD == curr_tissue]
 
-	# Load expression
-	tissue_expression = pd.read_table(
-	    EXPRESSION_PATH, skiprows=2, index_col=0, usecols=np.insert(tissue_idx, 0, 0)
-	)
+		# Drop duplicate samples for the same subject
+		tissue_sample_metadata = tissue_sample_metadata.drop_duplicates(subset="SUBJID")
+		assert len(tissue_sample_metadata.SUBJID.value_counts().unique()) == 1
+		tissue_idx = np.where(np.isin(expression_sample_ids, tissue_sample_metadata.SAMPID.values))[0]
+		assert np.all(np.unique(expression_sample_ids[tissue_idx], return_counts=True)[1] == 1)
+		
 
-	tissue_expression = tissue_expression.transpose()
+		# Load expression
+		tissue_expression = pd.read_table(
+		    EXPRESSION_PATH, skiprows=2, index_col=0, usecols=np.insert(tissue_idx, 0, 0)
+		)
 
-	tissue_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in tissue_expression.index.values])
-	assert np.all(np.unique(tissue_sample_ids, return_counts=True)[1] == 1)
-	tissue_expression.to_csv("../gtex_expression_{}.csv".format(TISSUE))
-	import ipdb; ipdb.set_trace()
+		tissue_expression = tissue_expression.transpose()
+
+		tissue_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in tissue_expression.index.values])
+		assert np.all(np.unique(tissue_sample_ids, return_counts=True)[1] == 1)
+		tissue_expression.to_csv("../gtex_expression_{}.csv".format(curr_tissue))
+		# import ipdb; ipdb.set_trace()
 
 	
 
