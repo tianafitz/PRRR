@@ -5,47 +5,47 @@ Created on Fri Mar 12 01:47:27 2021
 
 @author: tianafitz
 """
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import sys
 
 sys.path.append("../models")
 from prrr_nb_tfp import fit_rrr
-from rrr_tfp_gaussian import fit_rrr as fit_rrr_gaussian
-from sklearn.model_selection import train_test_split
 from collections import Counter
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 
 def clean(df):
-    ##generally, remove all data has no variance
-    variables = df.columns
+    df[df < 0] = np.nan
+    df = df.dropna(axis=1)
 
-    for x in variables:
-        unique_values = len(df[x].unique())
-        if (
-            unique_values == 1
-        ):  # no variance -- extereme case that captures also strings
-            df.drop(x, axis=1, inplace=True)
-    len(df.columns)
-    df = df.fillna(0.0)
-    return df
+    # Drop columns with zero variance
+    col_variances = np.var(df.values, 0)
+    nonzero_variance_cols = df.columns.values[np.where(col_variances > 0)[0]]
+    df = df[nonzero_variance_cols]
+    cols = df.columns
+
+    # Remove columns with negative values
+    nonnegative_columns = np.where(np.sum(df < 0, 0) == 0)[0]
+    df = df.values[:, nonnegative_columns]
+    return df, cols
 
 
 EXPRESSION_FILE = "../data/gtex_expression_Thyroid_clean.csv"
-METADATA_PATH = (
-    "../data/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
-)
+# METADATA_PATH = "../data/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
+GENOTYPE_PATH = "../data/thyroid_genotype.csv"
 
 # Read in expression file
 # This is samples x genes
 # The index of this dataframe is the sample ID
-# The columns are the Ensembl gene names
+# The columns are the Ensemble gene names
 expression_data = pd.read_csv(EXPRESSION_FILE, index_col=0)
 
 # Read in metadata
-v8_metadata = pd.read_table(METADATA_PATH)
+# v8_metadata = pd.read_table(METADATA_PATH)
+v8_metadata = pd.read_csv(GENOTYPE_PATH, index_col=0)
 
 sub = [x[0:10] for x in expression_data.index]
 for i in range(len(sub)):
@@ -53,30 +53,24 @@ for i in range(len(sub)):
         sub[i] = sub[i][:-1]
 
 cnt = Counter(sub)
-meta = pd.DataFrame(columns = v8_metadata.columns)
+meta = pd.DataFrame(columns=v8_metadata.columns)
 
 for x in cnt:
-    df_try  = v8_metadata[v8_metadata['SUBJID'] == x]
-    meta = meta.append([df_try]*cnt[x], ignore_index=True)
-meta  =  pd.get_dummies(meta)
+    if x not in v8_metadata.index:
+        rem = [i for i, s in enumerate(expression_data.index) if s.startswith(x)]
+        expression_data = expression_data.drop(expression_data.index[rem])
+        continue
+    # df_try = v8_metadata[v8_metadata['SUBJID'] == x]
+    df_try = v8_metadata[v8_metadata.index == x]
+    meta = meta.append([df_try] * cnt[x])
+meta = pd.get_dummies(meta)
 
-#meta = pd.read_csv("../data/meta.csv", index_col=0)
-meta = clean(meta)
+meta, meta_cols = clean(meta)
 
-#meta = meta[["HGHT", "WGHT", "BMI", "TRDNISCH"]]
-
+# meta = meta[["HGHT", "WGHT", "BMI"]]
 
 # Cast to integers
 expression_data = expression_data.values.astype(int)
-
-# Drop columns with zero variance
-col_variances = np.var(meta.values, 0)
-nonzero_variance_cols = meta.columns.values[np.where(col_variances > 0)[0]]
-meta = meta[nonzero_variance_cols]
-
-# Remove columns with negative values
-nonnegative_columns = np.where(np.sum(meta < 0, 0) == 0)[0]
-meta = meta.values[:, nonnegative_columns]
 
 # Fit model
 rrr_results = fit_rrr(Y=expression_data, X=meta, k=5)
@@ -92,13 +86,14 @@ AB_est = A_est @ B_est
 sns.heatmap(AB_est)
 plt.show()
 
-sex_associated_genes = AB_est[0, :]
-plt.scatter(np.arange(len(sex_associated_genes)), -np.sort(-sex_associated_genes))
-plt.show()
+# sex_associated_genes = AB_est[0, :]
+# plt.scatter(np.arange(len(sex_associated_genes)), -np.sort(-sex_associated_genes))
+# plt.show()
 
-plt.scatter(np.arange(A_est.shape[0]), -np.sort(-A_est[:, 0]))
-plt.xlabel("Metadata variable index")
-plt.ylabel("Component enrichment")
-plt.show()
-import ipdb
-ipdb.set_trace()
+# plt.scatter(np.arange(A_est.shape[0]), -np.sort(-A_est[:, 0]))
+# plt.xlabel("Metadata variable index")
+# plt.ylabel("Component enrichment")
+# plt.show()
+
+# import ipdb
+# ipdb.set_trace()
