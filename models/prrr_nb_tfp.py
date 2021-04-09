@@ -113,6 +113,67 @@ def fit_rrr(X, Y, k):
     return return_dict
 
 
+def poisson_regression(X, q):
+
+    n, p = X.shape
+
+    B = yield tfd.Gamma(
+        concentration=tf.fill([p, q], 2.0), rate=tf.ones([p, q]), name="B"
+    )
+
+    Y = yield tfd.Poisson(
+        rate=tf.matmul(X.astype("float32"), B), name="Y"
+    )
+
+
+def fit_poisson_regression(X, Y):
+
+    assert X.shape[0] == Y.shape[0]
+    n, p = X.shape
+    _, q = Y.shape
+
+    # ------- Specify model ---------
+
+    pr_model = functools.partial(poisson_regression, X=X, q=q)
+
+    model = tfd.JointDistributionCoroutineAutoBatched(pr_model)
+
+    def target_log_prob_fn(B):
+        return model.log_prob((B, Y))
+
+    # ------- Specify variational families -----------
+
+    qB_mean = tf.Variable(tf.random.normal([p, q]))
+    qB_stddv = tfp.util.TransformedVariable(
+        1e-4 * tf.ones([p, q]), bijector=tfb.Softplus()
+    )
+
+    def factored_normal_variational_model():
+        qB = yield tfd.LogNormal(loc=qB_mean, scale=qB_stddv, name="qB")
+
+    # Surrogate posterior that we will try to make close to p
+    surrogate_posterior = tfd.JointDistributionCoroutineAutoBatched(
+        factored_normal_variational_model
+    )
+
+    # --------- Fit variational inference model using MC samples and gradient descent ----------
+
+    losses = tfp.vi.fit_surrogate_posterior(
+        target_log_prob_fn,
+        surrogate_posterior=surrogate_posterior,
+        optimizer=tf.optimizers.Adam(learning_rate=LEARNING_RATE_VI),
+        num_steps=NUM_VI_ITERS,
+    )
+
+    return_dict = {
+        "loss_trace": losses,
+        "B_mean": qB_mean,
+        "B_stddev": qB_stddv
+    }
+
+    return return_dict
+
+
 def naive_bayes(X, q):
 
     n, p = X.shape
