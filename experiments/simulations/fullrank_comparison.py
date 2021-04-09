@@ -30,7 +30,7 @@ def compare_fullrank_rrr():
 
     p = 1000
     # q = 1000
-    n = 200
+    n = 50
     n_train = 50
     k = 3
     mses_fullank = np.zeros((num_repeats, len(q_list)))
@@ -86,18 +86,12 @@ def compare_fullrank_rrr():
     plt.xlabel(r"$q$")
     plt.ylabel("MSE")
     plt.legend()
+    plt.tight_layout()
+    plt.savefig(pjoin(FIGURE_DIR, "fullrank_vs_prrr.png"))
+    plt.savefig("../../figures/paper_figures/figure2.pdf", bbox_inches="tight")
     plt.show()
 
     
-
-    # plt.figure(figsize=(10, 8))
-    # sns.boxplot(data=mse_df, x="variable", y="value")
-    # plt.xticks(np.arange(2), ["Full-rank", "PRRR"])
-    # plt.xlabel("")
-    # plt.ylabel("Mean squared error")
-    # plt.tight_layout()
-    # plt.savefig(pjoin(FIGURE_DIR, "fullrank_vs_prrr.png"))
-    # plt.savefig("../../figures/paper_figures/figure2.pdf", bbox_inches="tight")
     # plt.show()
     import ipdb; ipdb.set_trace()
 
