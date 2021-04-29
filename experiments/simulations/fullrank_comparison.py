@@ -28,9 +28,9 @@ q_list = [100, 1000, 10000]
 
 def compare_fullrank_rrr():
 
-    p = 1000
+    p = 100
     # q = 1000
-    n = 50
+    n = 100
     n_train = 50
     k = 3
     mses_fullank = np.zeros((num_repeats, len(q_list)))
