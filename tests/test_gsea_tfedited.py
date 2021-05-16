@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../util")
-from gsea import gsea_fisher_tfedited
+from gsea_tfedited import gsea_fisher
 import pandas as pd
 
 def test_gsea():
