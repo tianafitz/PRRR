@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 import subprocess
+import sys
+sys.path.append("../../util")
 
 
 def gsea_fisher(hit_genes):
