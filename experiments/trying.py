@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.impute import KNNImputer
 
 
 def clean(df):
@@ -34,8 +35,8 @@ def clean(df):
 
 
 EXPRESSION_FILE = "../data/gtex_expression_Thyroid_clean.csv"
-# METADATA_PATH = "../data/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
-GENOTYPE_PATH = "../data/thyroid_genotype.csv"
+METADATA_PATH = "../data/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
+# GENOTYPE_PATH = "../data/thyroid_genotype.csv"
 
 # Read in expression file
 # This is samples x genes
@@ -44,8 +45,8 @@ GENOTYPE_PATH = "../data/thyroid_genotype.csv"
 expression_data = pd.read_csv(EXPRESSION_FILE, index_col=0)
 
 # Read in metadata
-# v8_metadata = pd.read_table(METADATA_PATH)
-v8_metadata = pd.read_csv(GENOTYPE_PATH, index_col=0)
+v8_metadata = pd.read_table(METADATA_PATH)
+# v8_metadata = pd.read_csv(GENOTYPE_PATH, index_col=0)
 
 sub = [x[0:10] for x in expression_data.index]
 for i in range(len(sub)):
@@ -56,18 +57,29 @@ cnt = Counter(sub)
 meta = pd.DataFrame(columns=v8_metadata.columns)
 
 for x in cnt:
-    if x not in v8_metadata.index:
-        rem = [i for i, s in enumerate(expression_data.index) if s.startswith(x)]
-        expression_data = expression_data.drop(expression_data.index[rem])
-        continue
-    # df_try = v8_metadata[v8_metadata['SUBJID'] == x]
-    df_try = v8_metadata[v8_metadata.index == x]
+    # if x not in v8_metadata.index:
+    #     rem = [i for i, s in enumerate(expression_data.index) if s.startswith(x)]
+    #     expression_data = expression_data.drop(expression_data.index[rem])
+    #     continue
+    df_try = v8_metadata[v8_metadata['SUBJID'] == x]
+    # df_try = v8_metadata[v8_metadata.index == x]
     meta = meta.append([df_try] * cnt[x])
+meta = meta.drop(columns=['SUBJID'])
+
+###
+##generally, remove all data has no variance or have more than 75 percent missing data
+variables = meta.columns
+
+for x in variables:
+    unique_values = len(meta[x].unique())
+    if unique_values > 5:
+        meta.drop(x, axis=1, inplace=True)
+###
+
+meta = meta.replace(99, np.nan)
 meta = pd.get_dummies(meta)
-
+meta = meta.loc[:, ~meta.columns.str.endswith('NAN')]
 meta, meta_cols = clean(meta)
-
-# meta = meta[["HGHT", "WGHT", "BMI"]]
 
 # Cast to integers
 expression_data = expression_data.values.astype(int)
@@ -89,7 +101,7 @@ plt.show()
 # sex_associated_genes = AB_est[0, :]
 # plt.scatter(np.arange(len(sex_associated_genes)), -np.sort(-sex_associated_genes))
 # plt.show()
-
+#
 # plt.scatter(np.arange(A_est.shape[0]), -np.sort(-A_est[:, 0]))
 # plt.xlabel("Metadata variable index")
 # plt.ylabel("Component enrichment")

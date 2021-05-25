@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+sys.path.append("../util")
+from gsea_tfedited import gsea_fisher
 
 [data, labels, names] = load_example_data("zeisel")
 labels = labels[1].T
@@ -26,3 +28,5 @@ sns.heatmap(AB_est)
 plt.show()
 
 # import ipdb; ipdb.set_trace()
+hit_genes = names[1]
+gsea_out = gsea_fisher(hit_genes)

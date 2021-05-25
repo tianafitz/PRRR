@@ -19,7 +19,10 @@ ensembl_to_gene_symbol <- function(ensembl_ids) {
 #'
 
 # # Load gene expression matrix
-gene_exp <- read.csv("../data/gtex_expression_Thyroid_clean.csv")
+# gene_exp <- read.csv("../data/gtex_expression_Thyroid_clean.csv")
+gene_exp <- read.table("../experiments/zeisel/GSE60361_C1-3005-Expression.txt")
+gene_exp <- as.list(gene_exp[1])
+ensembl_ids_raw <-gene_exp[1:1000] %>% as.character()
 
 # Gene ensembl IDs
 ensembl_ids_raw <- colnames(gene_exp) %>% as.character()
@@ -35,10 +38,11 @@ ensembl_ids <- lapply(
 #   as.character()
 
 # Uncomment this line if gene names are already gene symbols
-hit_genes <- ensembl_to_gene_symbol(ensembl_ids)
+# hit_genes <- ensembl_to_gene_symbol(ensembl_ids)
+hit_genes <- ensembl_ids
 hit_genes <- unique(hit_genes)
 
-gsc_file <- "../util/h.all.v7.1.symbols.gmt"
+gsc_file <- "h.all.v7.1.symbols.gmt"
 gsc <- piano::loadGSC(gsc_file)
 all_genes <- unique(unlist(gsc$gsc) %>% as.character())
 
@@ -60,7 +64,7 @@ result_colnames <- c(
   "nonsignificant_notin_gs"
 )
 
-out_file <- "../util/tmp_output.csv"
+out_file <- "tmp_output.csv"
 out <- gsea_hyper_res$resTab %>%
   as.data.frame() %>%
   tibble::rownames_to_column("pathway") %>%
