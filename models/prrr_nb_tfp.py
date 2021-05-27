@@ -39,8 +39,8 @@ def rrr(X, q, k, size_factors=None):
     )
 
     count_mean = tf.matmul(tf.matmul(X.astype("float32"), A), B)
+    # import ipdb; ipdb.set_trace()
     if size_factors is not None:
-        # import ipdb; ipdb.set_trace()
         count_mean = tf.multiply(count_mean, size_factors)
         
     Y = yield tfd.Poisson(
