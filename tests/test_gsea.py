@@ -1,6 +1,9 @@
 import sys
-sys.path.append("../util")
-from gsea import gsea_fisher
+try:
+	sys.path.append("../util")
+	from gsea import gsea_fisher
+except:
+	from util.gsea import gsea_fisher
 
 def test_gsea():
 	hit_genes = ["BRAF"]

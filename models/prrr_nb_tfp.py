@@ -26,7 +26,7 @@ LEARNING_RATE_VI = 0.05
 # ------- Specify model ---------
 
 
-def rrr(X, q, k):
+def rrr(X, q, k, size_factors=None):
 
     n, p = X.shape
 
@@ -38,12 +38,17 @@ def rrr(X, q, k):
         concentration=tf.fill([k, q], 2.0), rate=tf.ones([k, q]), name="B"
     )
 
+    count_mean = tf.matmul(tf.matmul(X.astype("float32"), A), B)
+    if size_factors is not None:
+        # import ipdb; ipdb.set_trace()
+        count_mean = tf.multiply(count_mean, size_factors)
+        
     Y = yield tfd.Poisson(
-        rate=tf.matmul(tf.matmul(X.astype("float32"), A), B), name="Y"
+        rate=count_mean, name="Y"
     )
 
 
-def fit_rrr(X, Y, k):
+def fit_rrr(X, Y, k, size_factors=None):
 
     assert X.shape[0] == Y.shape[0]
     n, p = X.shape
@@ -51,7 +56,7 @@ def fit_rrr(X, Y, k):
 
     # ------- Specify model ---------
 
-    rrr_model = functools.partial(rrr, X=X, q=q, k=k)
+    rrr_model = functools.partial(rrr, X=X, q=q, k=k, size_factors=size_factors)
 
     model = tfd.JointDistributionCoroutineAutoBatched(rrr_model)
 
@@ -60,13 +65,7 @@ def fit_rrr(X, Y, k):
 
     # ------- Specify variational families -----------
 
-    # Variational parmater means
-
-    # qA_concentration = tf.fill([p, k], 2.0)
-    # qA_rate = tfp.util.TransformedVariable(tf.ones([p, k]), bijector=tfb.Softplus())
-
-    # qB_concentration = tf.fill([k, q], 2.0)
-    # qB_rate = tfp.util.TransformedVariable(tf.ones([k, q]), bijector=tfb.Softplus())
+    # Variational parameter means
 
     qA_mean = tf.Variable(tf.random.normal([p, k]))
     qA_stddv = tfp.util.TransformedVariable(
@@ -79,12 +78,6 @@ def fit_rrr(X, Y, k):
     )
 
     def factored_normal_variational_model():
-        # qA = yield tfd.Gamma(concentration=qA_concentration,
-        #                      rate=qA_rate,
-        #                       name="qA")
-        # qB = yield tfd.Gamma(concentration=qB_concentration,
-        #                      rate=qB_rate,
-        #                       name="qB")
         qA = yield tfd.LogNormal(loc=qA_mean, scale=qA_stddv, name="qA")
         qB = yield tfd.LogNormal(loc=qB_mean, scale=qB_stddv, name="qB")
 
@@ -229,10 +222,6 @@ def fit_naive_bayes(X, Y):
     return_dict = {
         "loss_trace": losses,
     }
-
-    # plt.scatter(A_true[:, 0], qA_mean.numpy()[:, 0])
-    # plt.show()
-    # import ipdb; ipdb.set_trace()
 
     return return_dict
 

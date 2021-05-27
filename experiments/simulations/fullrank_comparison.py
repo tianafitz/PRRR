@@ -23,7 +23,8 @@ num_repeats = 3
 FIGURE_DIR = "../../figures/plots/"
 
 ## Get error for varying values of q
-q_list = [100, 1000, 10000]
+q_list = np.arange(1000, 10001, 1000)
+print(q_list)
 
 
 def compare_fullrank_rrr():
@@ -88,7 +89,7 @@ def compare_fullrank_rrr():
     plt.legend()
     plt.tight_layout()
     plt.savefig(pjoin(FIGURE_DIR, "fullrank_vs_prrr.png"))
-    plt.savefig("../../figures/paper_figures/figure2.pdf", bbox_inches="tight")
+    plt.savefig("../../figures/paper_figures/figure3.pdf", bbox_inches="tight")
     plt.show()
 
     
