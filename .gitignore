@@ -6,7 +6,6 @@ __pycache__/
 *.txt
 scGeneFit-python-master/
 figures/
-data/
+# data/
 !data/gtex_expression_thyroid.csv
-!data/*.csv
 
