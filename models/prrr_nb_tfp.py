@@ -110,16 +110,21 @@ def poisson_regression(X, q):
 
     n, p = X.shape
 
-    B = yield tfd.Gamma(
-        concentration=tf.fill([p, q], 2.0), rate=tf.ones([p, q]), name="B"
+    # B = yield tfd.Gamma(
+    #     concentration=tf.fill([p, q], 2.0), rate=tf.ones([p, q]), name="B"
+    # )
+    B = yield tfd.Normal(
+        loc=tf.zeros([p, q]), scale=np.sqrt(1/(p * q)) * tf.ones([p, q]), name="B"
     )
+
+    predicted_rate = tf.exp(tf.matmul(X.astype("float32"), B))
 
     Y = yield tfd.Poisson(
-        rate=tf.matmul(X.astype("float32"), B), name="Y"
+        rate=predicted_rate, name="Y"
     )
 
 
-def fit_poisson_regression(X, Y):
+def fit_poisson_regression(X, Y, use_vi=True, k_initialize=2):
 
     assert X.shape[0] == Y.shape[0]
     n, p = X.shape
@@ -134,35 +139,55 @@ def fit_poisson_regression(X, Y):
     def target_log_prob_fn(B):
         return model.log_prob((B, Y))
 
-    # ------- Specify variational families -----------
+    if use_vi:
 
-    qB_mean = tf.Variable(tf.random.normal([p, q]))
-    qB_stddv = tfp.util.TransformedVariable(
-        1e-4 * tf.ones([p, q]), bijector=tfb.Softplus()
-    )
+        # ------- Specify variational families -----------
 
-    def factored_normal_variational_model():
-        qB = yield tfd.LogNormal(loc=qB_mean, scale=qB_stddv, name="qB")
+        qB_mean = tf.Variable(tf.random.normal([p, q], stddev=np.sqrt(1/(p * q))))
+        qB_stddv = tfp.util.TransformedVariable(
+            1e-4 * tf.ones([p, q]), bijector=tfb.Softplus()
+        )
 
-    # Surrogate posterior that we will try to make close to p
-    surrogate_posterior = tfd.JointDistributionCoroutineAutoBatched(
-        factored_normal_variational_model
-    )
+        def factored_normal_variational_model():
+            qB = yield tfd.LogNormal(loc=qB_mean, scale=qB_stddv, name="qB")
 
-    # --------- Fit variational inference model using MC samples and gradient descent ----------
+        # Surrogate posterior that we will try to make close to p
+        surrogate_posterior = tfd.JointDistributionCoroutineAutoBatched(
+            factored_normal_variational_model
+        )
 
-    losses = tfp.vi.fit_surrogate_posterior(
-        target_log_prob_fn,
-        surrogate_posterior=surrogate_posterior,
-        optimizer=tf.optimizers.Adam(learning_rate=LEARNING_RATE_VI),
-        num_steps=NUM_VI_ITERS,
-    )
+        # --------- Fit variational inference model using MC samples and gradient descent ----------
 
-    return_dict = {
-        "loss_trace": losses,
-        "B_mean": qB_mean,
-        "B_stddev": qB_stddv
-    }
+        losses = tfp.vi.fit_surrogate_posterior(
+            target_log_prob_fn,
+            surrogate_posterior=surrogate_posterior,
+            optimizer=tf.optimizers.Adam(learning_rate=LEARNING_RATE_VI),
+            num_steps=NUM_VI_ITERS,
+        )
+
+        return_dict = {
+            "loss_trace": losses,
+            "B_mean": qB_mean,
+            "B_stddev": qB_stddv
+        }
+
+    else:
+        ## MAP estimation
+
+        B = tf.Variable(tf.random.normal([p, q]))
+        # A_tmp = tf.Variable(tf.random.normal([p, k_initialize], stddev=np.sqrt(1 / p)))
+        # B_tmp = tf.Variable(tf.random.normal([k_initialize, q], stddev=np.sqrt(1 / q)))
+        # B = tf.matmul(A_tmp, B_tmp)
+
+        losses = tfp.math.minimize(
+            lambda: -target_log_prob_fn(B),
+            optimizer=tf.optimizers.Adam(learning_rate=0.05),
+            num_steps=500)
+
+        return_dict = {
+            "loss_trace": losses,
+            "B": B,
+        }
 
     return return_dict
 
