@@ -3,6 +3,7 @@ __pycache__/
 *.csv
 *.gct
 *.tsv
+*.zip
 # *.txt
 scGeneFit-python-master/
 figures/
