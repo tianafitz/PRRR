@@ -19,7 +19,6 @@ tf.enable_v2_behavior()
 
 warnings.filterwarnings("ignore")
 
-NUM_VI_ITERS = 2000
 LEARNING_RATE = 1e-2
 
 
@@ -41,26 +40,33 @@ class GRRR:
             name="B",
         )
 
-        linear_predictor = tf.matmul(tf.matmul(X, A), B)
+        # Intercept
+        b0 = yield tfd.Normal(
+            loc=tf.zeros([1, self.q]),
+            scale=tf.ones([1, self.q]),
+            name="b0",
+        )
 
-        # if log_size_factors is not None:
-        #     linear_predictor = tf.add(linear_predictor, log_size_factors)
+        linear_predictor = tf.matmul(tf.matmul(X, A), B) + b0
+
+        if log_size_factors is not None:
+            linear_predictor = tf.add(linear_predictor, log_size_factors)
 
         predicted_rate = tf.exp(linear_predictor)
 
         Y = yield tfd.Poisson(rate=predicted_rate, name="Y")
 
-    def fit(self, X, Y, size_factors=None, use_total_counts_as_size_factors=True, use_vi=True):
+    def fit(self, X, Y, size_factors=None, use_total_counts_as_size_factors=True, use_vi=True, n_iters=2_000, learning_rate=1e-2):
 
         assert X.shape[0] == Y.shape[0]
         self.n, self.p = X.shape
         _, self.q = Y.shape
-        self.size_factors = size_factors
         X = X.astype("float32")
 
         if use_total_counts_as_size_factors and size_factors is None:
             size_factors = np.sum(Y, axis=1).astype(float).reshape(-1, 1)
         log_size_factors = np.log(size_factors)
+        self.size_factors = size_factors
 
         # ------- Specify model ---------
 
@@ -68,8 +74,8 @@ class GRRR:
 
         model = tfd.JointDistributionCoroutineAutoBatched(rrr_model)
 
-        def target_log_prob_fn(A, B):
-            return model.log_prob((A, B, Y))
+        def target_log_prob_fn(A, B, b0):
+            return model.log_prob((A, B, b0, Y))
 
         if use_vi:
 
@@ -95,9 +101,19 @@ class GRRR:
                 1e-4 * tf.ones([self.latent_dim, self.q]), bijector=tfb.Softplus()
             )
 
+            qb0_mean = tf.Variable(
+                tf.random.normal(
+                    [1, self.q], stddev=np.sqrt(1 / self.q)
+                )
+            )
+            qb0_stddv = tfp.util.TransformedVariable(
+                1e-4 * tf.ones([1, self.q]), bijector=tfb.Softplus()
+            )
+
             def factored_normal_variational_model():
                 qA = yield tfd.Normal(loc=qA_mean, scale=qA_stddv, name="qA")
                 qB = yield tfd.Normal(loc=qB_mean, scale=qB_stddv, name="qB")
+                qb0 = yield tfd.Normal(loc=qb0_mean, scale=qb0_stddv, name="qb0")
 
             # Surrogate posterior that we will try to make close to p
             surrogate_posterior = tfd.JointDistributionCoroutineAutoBatched(
@@ -109,13 +125,13 @@ class GRRR:
             convergence_criterion = (
                 tfp.optimizer.convergence_criteria.LossNotDecreasing(atol=1e-1)
             )
-            optimizer = tf.optimizers.Adam(learning_rate=LEARNING_RATE)
+            optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 
             losses = tfp.vi.fit_surrogate_posterior(
                 target_log_prob_fn,
                 surrogate_posterior=surrogate_posterior,
                 optimizer=optimizer,
-                num_steps=NUM_VI_ITERS,
+                num_steps=n_iters,
                 convergence_criterion=convergence_criterion,
             )
             n_iters = optimizer._iterations.numpy()
@@ -127,6 +143,11 @@ class GRRR:
                 "A_stddev": qA_stddv,
                 "B_mean": qB_mean,
                 "B_stddev": qB_stddv,
+                "b0_mean": qb0_mean,
+                "b0_stddev": qb0_stddv,
+                "A": qA_mean,
+                "B": qB_mean,
+                "b0": qb0_mean,
             }
 
         else:
@@ -134,24 +155,26 @@ class GRRR:
 
             A = tf.Variable(
                 tf.random.normal(
-                    [self.p, self.latent_dim] #, stddev=np.sqrt(1 / self.p)
+                    [self.p, self.latent_dim], stddev=np.sqrt(1 / self.p)
                 )
             )
             B = tf.Variable(
                 tf.random.normal(
-                    [self.latent_dim, self.q] #, stddev=np.sqrt(1 / self.q)
+                    [self.latent_dim, self.q], stddev=np.sqrt(1 / self.q)
+                )
+            )
+            b0 = tf.Variable(
+                tf.random.normal(
+                    [1, self.q], stddev=np.sqrt(1 / self.q)
                 )
             )
 
-            # convergence_criterion = (
-            #     tfp.optimizer.convergence_criteria.LossNotDecreasing(atol=1e-1)
-            # )
-            optimizer = tf.optimizers.Adam(learning_rate=LEARNING_RATE)
+            optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 
             losses = tfp.math.minimize(
-                lambda: -target_log_prob_fn(A, B),
+                lambda: -target_log_prob_fn(A, B, b0),
                 optimizer=optimizer,
-                num_steps=NUM_VI_ITERS,
+                num_steps=n_iters,
                 # convergence_criterion=convergence_criterion,
             )
             
@@ -161,6 +184,7 @@ class GRRR:
             self.param_dict = {
                 "A": A,
                 "B": B,
+                "b0": b0,
             }
 
         return
@@ -189,13 +213,13 @@ if __name__ == "__main__":
         grrr = GRRR(latent_dim=k_true)
         grrr.fit(X=X, Y=Y, use_vi=False, size_factors=size_factors)
 
-        A_est, B_est = grrr.param_dict["A"].numpy(), grrr.param_dict["B"].numpy()
-        preds = np.exp(X @ A_est @ B_est + np.log(size_factors))
+        A_est, B_est, b0_est = grrr.param_dict["A"].numpy(), grrr.param_dict["B"].numpy(), grrr.param_dict["b0"].numpy()
+        preds = np.exp(X @ A_est @ B_est + b0_est + np.log(size_factors))
 
         plt.scatter(Y_mean[:, 0], preds[:, 0])
         plt.show()
 
-        # import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
 
 
 
