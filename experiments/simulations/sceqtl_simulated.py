@@ -26,11 +26,11 @@ USE_VI = False
 # latent_dim = 5
 
 
-X = np.random.choice([0, 1, 2], replace=True, size=(n, p)) # genotype
+X = np.random.choice([0, 1, 2], replace=True, size=(n, p))  # genotype
 # U = np.random.normal(loc=0., scale=1., size=(p, r_true))
 # V = np.random.normal(loc=0., scale=1., size=(r_true, q))
-U = np.array([[1.], [-1]])
-V = np.array([[1., -1]])
+U = np.array([[1.0], [-1.0]])
+V = np.array([[1.0, -1.0]])
 
 linear_predictor = X @ U @ V
 # size_factors = np.random.uniform(low=1e-1, high=2, size=n).reshape(-1, 1)
@@ -48,7 +48,9 @@ n = nonzero_idx.shape[0]
 
 
 grrr = GRRR(latent_dim=r_true)
-grrr.fit(X=X, Y=Y, use_vi=USE_VI, n_iters=5000, learning_rate=1e-2, size_factors=size_factors)
+grrr.fit(
+    X=X, Y=Y, use_vi=USE_VI, n_iters=5000, learning_rate=1e-2, size_factors=size_factors
+)
 
 
 if USE_VI:
@@ -62,22 +64,30 @@ coeff_mat = U_est @ V_est
 top_coeff_idx = np.unravel_index(coeff_mat.argmax(), coeff_mat.shape)
 
 expression_normalized = np.log(Y / Y.sum(1).reshape(-1, 1) + 1)
-expression_normalized = (expression_normalized - expression_normalized.mean(0)) / expression_normalized.std(0)
+expression_normalized = (
+    expression_normalized - expression_normalized.mean(0)
+) / expression_normalized.std(0)
 
 expression_logged_stdized = np.log(Y + 1)
-expression_logged_stdized = (expression_logged_stdized - expression_logged_stdized.mean(0)) / expression_logged_stdized.std(0)
-expression_logged_stdized_jittered = expression_logged_stdized + np.random.normal(size=(n, q), scale=0.1)
+expression_logged_stdized = (
+    expression_logged_stdized - expression_logged_stdized.mean(0)
+) / expression_logged_stdized.std(0)
+expression_logged_stdized_jittered = expression_logged_stdized + np.random.normal(
+    size=(n, q), scale=0.1
+)
 
 
 expression_sliced = expression_normalized[:, top_coeff_idx[1]]
 Y_jittered = Y + np.random.normal(scale=0.1, size=(n, q))
+
 
 def abline(slope, intercept, label, color):
     """Plot a line from slope and intercept"""
     axes = plt.gca()
     x_vals = np.array(axes.get_xlim())
     y_vals = intercept + slope * x_vals
-    plt.plot(x_vals, y_vals, '--', label=label, color=color)
+    plt.plot(x_vals, y_vals, "--", label=label, color=color)
+
 
 # plt.figure(figsize=(15, 5))
 fig = plt.figure(figsize=(15, 5), constrained_layout=True)
@@ -87,20 +97,37 @@ eqtl_plot_inner = [
     ["eqtl2"],
 ]
 ax_dict = fig.subplot_mosaic(
-    [
-        ["genotype", "expression", eqtl_plot_inner]
-    ],
+    [["genotype", "expression", eqtl_plot_inner]],
+    gridspec_kw={"hspace": 0.5,}
 )
+# import ipdb; ipdb.set_trace()
 
 plt.sca(ax_dict["genotype"])
-plt.scatter(X[:, 0] + np.random.normal(size=n, scale=0.1), X[:, 1] + np.random.normal(size=n, scale=0.1), c=expression_logged_stdized[:, 0]) #, color="black")
+plt.scatter(
+    X[:, 0] + np.random.normal(size=n, scale=0.1),
+    X[:, 1] + np.random.normal(size=n, scale=0.1),
+    c=expression_logged_stdized[:, 0],
+)  # , color="black")
 plt.xlabel("SNP 1 genotype (MAF)")
 plt.ylabel("SNP 2 genotype (MAF)")
+plt.colorbar()
 
 
 plt.sca(ax_dict["expression"])
-plt.scatter(expression_logged_stdized_jittered[:, 0], expression_logged_stdized_jittered[:, 1], color="black")
-abline(slope=V_est.squeeze()[1] / V_est.squeeze()[0], intercept=0, label=r"$V$", color="red")
+plt.scatter(
+    expression_logged_stdized_jittered[:, 0],
+    expression_logged_stdized_jittered[:, 1],
+    color="black",
+)
+xlim, ylim = plt.gca().get_xlim(), plt.gca().get_ylim()
+abline(
+    slope=V_est.squeeze()[1] / V_est.squeeze()[0],
+    intercept=0,
+    label=r"$V$",
+    color="red",
+)
+plt.gca().set_xlim(xlim)
+plt.gca().set_ylim(ylim)
 plt.xlabel("Expression, gene 1")
 plt.ylabel("Expression, gene 2")
 plt.legend()
@@ -129,7 +156,6 @@ plt.show()
 
 # plt.scatter(X[:, 0] + np.random.normal(scale=0.1, size=n), X[:, 1] + np.random.normal(scale=0.1, size=n))
 # plt.show()
-import ipdb; ipdb.set_trace()
+import ipdb
 
-
-
+ipdb.set_trace()

@@ -9,6 +9,7 @@ from sklearn.metrics import r2_score
 from plottify import autosize
 
 import matplotlib
+
 font = {"size": 20}
 matplotlib.rc("font", **font)
 matplotlib.rcParams["text.usetex"] = True

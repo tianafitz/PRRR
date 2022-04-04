@@ -13,11 +13,11 @@ from sklearn.neural_network import MLPClassifier
 import os
 
 # EXPRESSION_PATH = "../expression_small.gct"
-EXPRESSION_PATH = "../GTEx_Analysis_2017-06-05_v8_RSEMv1.3.0_gene_expected_count.gct"
-SUBJECT_METADATA_PATH = "../GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
-SAMPLE_METADATA_PATH = "../GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt"
+EXPRESSION_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_RSEMv1.3.0_gene_expected_count.gct"
+SUBJECT_METADATA_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
+SAMPLE_METADATA_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt"
 
-NUM_GENES = 2000
+NUM_GENES = 4000
 # TISSUE = "Thyroid"
 
 all_data_files = os.listdir("..")
@@ -82,7 +82,7 @@ def main():
 	expression_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in expression_ids])
 	# assert np.all(np.unique(expression_sample_ids, return_counts=True)[1] == 1)
 
-	for curr_tissue in all_tissues:
+	for curr_tissue in ["Muscle - Skeletal"]: # all_tissues:
 
 		# if "Brain" not in curr_tissue:
 		# 	continue
@@ -109,7 +109,7 @@ def main():
 		# import ipdb; ipdb.set_trace()
 		assert np.all(np.unique(expression_sample_ids[tissue_idx], return_counts=True)[1] == 1)
 		
-		import ipdb; ipdb.set_trace()
+		# import ipdb; ipdb.set_trace()
 		# Load expression
 		tissue_expression = pd.read_table(
 		    EXPRESSION_PATH, skiprows=2, index_col=0, usecols=np.insert(tissue_idx, 0, 0)
@@ -120,7 +120,14 @@ def main():
 
 		tissue_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in tissue_expression.index.values])
 		assert np.all(np.unique(tissue_sample_ids, return_counts=True)[1] == 1)
-		tissue_expression.to_csv("../gtex_expression_{}.csv".format(curr_tissue))
+
+		try:
+			gene_variances = np.log(tissue_expression + 1).var(0).sort_values(ascending=False)
+		except:
+			gene_variances = np.log(tissue_expression.iloc[1:].astype(float) + 1).var(0).sort_values(ascending=False)
+		top_genes = gene_variances.index.values[:NUM_GENES]
+		tissue_expression = tissue_expression[top_genes]
+		tissue_expression.to_csv("../gtex/gtex_expression_{}.csv".format(curr_tissue))
 		# import ipdb; ipdb.set_trace()
 
 	

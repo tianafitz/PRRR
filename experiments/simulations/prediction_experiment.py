@@ -19,7 +19,6 @@ frac_train = 0.8
 USE_VI = True
 
 
-
 n_repeats = 100
 latent_dim_list = [1, 2, 3, 4, 5, 10, 20]
 results = np.zeros((n_repeats, len(latent_dim_list)))
@@ -38,10 +37,8 @@ for ii in range(n_repeats):
     size_factors = np.ones((n, 1))
     linear_predictor += np.log(size_factors)
     Y_mean = np.exp(linear_predictor)
-    
+
     Y = np.random.poisson(Y_mean)
-
-
 
     for jj, latent_dim in enumerate(latent_dim_list):
 
@@ -50,12 +47,22 @@ for ii in range(n_repeats):
 
         X_train, y_train = X[train_idx], Y[train_idx]
         X_test, y_test = X[test_idx], Y[test_idx]
-        size_factors_train, size_factors_test = size_factors[train_idx], size_factors[test_idx]
+        size_factors_train, size_factors_test = (
+            size_factors[train_idx],
+            size_factors[test_idx],
+        )
 
         # size_factors = np.ones((train_idx.shape[0], 1))
 
         grrr = GRRR(latent_dim=latent_dim)
-        grrr.fit(X=X_train, Y=y_train, use_vi=USE_VI, n_iters=5000, learning_rate=1e-2, size_factors=size_factors_train)
+        grrr.fit(
+            X=X_train,
+            Y=y_train,
+            use_vi=USE_VI,
+            n_iters=5000,
+            learning_rate=1e-2,
+            size_factors=size_factors_train,
+        )
 
         if USE_VI:
             A_est = grrr.param_dict["A_mean"].numpy()
@@ -66,7 +73,7 @@ for ii in range(n_repeats):
         # import ipdb; ipdb.set_trace()
 
         test_preds = np.exp(X_test @ A_est @ B_est + np.log(size_factors_test))
-        
+
         curr_r2 = r2_score(y_test, test_preds)
         print(latent_dim, flush=True)
         print(curr_r2, flush=True)
@@ -79,7 +86,9 @@ for ii in range(n_repeats):
         # import ipdb; ipdb.set_trace()
 
 results_df = pd.melt(pd.DataFrame(results, columns=latent_dim_list))
-results_df.to_csv("./out/prediction_experiment_results_{}.csv".format("VI" if USE_VI else ""))
+results_df.to_csv(
+    "./out/prediction_experiment_results_{}.csv".format("VI" if USE_VI else "")
+)
 plt.figure(figsize=(5, 5))
 sns.boxplot(data=results_df, x="variable", y="value")
 plt.xlabel("Rank")

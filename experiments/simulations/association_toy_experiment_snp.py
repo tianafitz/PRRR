@@ -43,17 +43,18 @@ Y = np.random.poisson(X @ A @ B.T)
 rrr_results = fit_rrr(X=X, Y=Y, k=k)
 
 
-
 ## Extract parameters
 A_mean = rrr_results["A_mean"].numpy()
 B_mean = rrr_results["B_mean"].numpy()
 A_stddev = rrr_results["A_stddev"].numpy()
 B_stddev = rrr_results["B_stddev"].numpy()
 
-A_est = np.exp(A_mean + 0.5 * A_stddev**2)
-B_est = np.exp(B_mean + 0.5 * B_stddev**2)
+A_est = np.exp(A_mean + 0.5 * A_stddev ** 2)
+B_est = np.exp(B_mean + 0.5 * B_stddev ** 2)
 
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 
 ## Plot
 f, (a1, a2, a3) = plt.subplots(

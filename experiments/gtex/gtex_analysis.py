@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from collections import Counter
 
 import matplotlib
+
 font = {"size": 15}
 matplotlib.rc("font", **font)
 
@@ -84,5 +85,6 @@ plt.ylabel("Gene coefficients (female)", fontsize=25)
 plt.tight_layout()
 plt.savefig("../../figures/plots/gtex_male_vs_female.png")
 plt.show()
-import ipdb; ipdb.set_trace()
+import ipdb
 
+ipdb.set_trace()

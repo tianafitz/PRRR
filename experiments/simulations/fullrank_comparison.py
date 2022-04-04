@@ -38,7 +38,7 @@ def compare_fullrank_rrr():
     # q = 1000
     n = 100
     n_train = 80
-    
+
     mses_fullank = np.zeros((num_repeats, len(q_list)))
     mses_rrr = np.zeros((num_repeats, len(q_list)))
 
@@ -64,12 +64,14 @@ def compare_fullrank_rrr():
             X_test, Y_test = X[n_train:, :], Y[n_train:, :]
 
             ###### Fit full-rank model ######
-            pr_results = fit_poisson_regression(X=X_train, Y=Y_train, use_vi=False, k_initialize=k)
+            pr_results = fit_poisson_regression(
+                X=X_train, Y=Y_train, use_vi=False, k_initialize=k
+            )
             B = pr_results["B"].numpy()
 
             # Compute MSE on test data
             test_preds = np.exp(X_test @ B)
-            mse = np.mean((test_preds - Y_test)**2)
+            mse = np.mean((test_preds - Y_test) ** 2)
             print("MSE, PR: {}".format(round(mse, 2)))
             mses_fullank[ii, jj] = mse
 
@@ -81,7 +83,7 @@ def compare_fullrank_rrr():
 
             # Compute MSE on test data
             test_preds = np.exp(X_test @ AB_est)
-            mse = np.mean((test_preds - Y_test)**2)
+            mse = np.mean((test_preds - Y_test) ** 2)
             # mse = r2_score(test_preds, Y_test)
             mses_rrr[ii, jj] = mse
 
@@ -90,15 +92,13 @@ def compare_fullrank_rrr():
             # plt.scatter(np.ndarray.flatten(test_preds), np.ndarray.flatten(Y_test))
             # plt.show()
             # import ipdb; ipdb.set_trace()
-            
 
             # print("MSE PR: {}, MSE RRR: {}".format(round(mses_fullank[ii], 3), round(mses_rrr[ii], 3)))
-        
 
     fullrank_df = pd.melt(pd.DataFrame(mses_fullank, columns=q_list))
-    fullrank_df['model'] = ["Full rank"] * fullrank_df.shape[0]
+    fullrank_df["model"] = ["Full rank"] * fullrank_df.shape[0]
     prrr_df = pd.melt(pd.DataFrame(mses_rrr, columns=q_list))
-    prrr_df['model'] = ["PRRR"] * prrr_df.shape[0]
+    prrr_df["model"] = ["PRRR"] * prrr_df.shape[0]
     mse_df = pd.concat([fullrank_df, prrr_df], axis=0)
 
     # mse_df = pd.DataFrame({"Full rank": mses_fullank, "PRRR": mses_rrr})
@@ -119,9 +119,10 @@ def compare_fullrank_rrr():
     # plt.savefig("../../figures/paper_figures/figure3.pdf", bbox_inches="tight")
     plt.show()
 
-    
     # plt.show()
-    import ipdb; ipdb.set_trace()
+    import ipdb
+
+    ipdb.set_trace()
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ matplotlib.rcParams["text.usetex"] = True
 
 FIGURE_DIR = "../../figures/plots/"
 
+
 def association_mapping():
 
     p = 10
@@ -29,10 +30,10 @@ def association_mapping():
 
     A_true = np.random.gamma(2, 1, size=(p, k))
     B_true = np.random.gamma(2, 1, size=(k, q))
-    B_true[0, :2*q//3] = 0
-    B_true[1, q//3:] = 0
-    B_true[2, :q//3] = 0
-    B_true[2, 2*q//3:] = 0
+    B_true[0, : 2 * q // 3] = 0
+    B_true[1, q // 3 :] = 0
+    B_true[2, : q // 3] = 0
+    B_true[2, 2 * q // 3 :] = 0
     AB_true = A_true @ B_true
     X = np.exp(np.random.normal(size=(n, p)))
     Y_mean = X @ A_true @ B_true
@@ -63,10 +64,14 @@ def association_mapping():
     plt.xticks([])
     plt.title(r"Estimated $V$")
     plt.tight_layout()
-    plt.savefig(pjoin("../../figures/paper_figures/", "figure4.pdf"), bbox_inches="tight")
+    plt.savefig(
+        pjoin("../../figures/paper_figures/", "figure4.pdf"), bbox_inches="tight"
+    )
     plt.show()
 
-    import ipdb; ipdb.set_trace()
+    import ipdb
+
+    ipdb.set_trace()
 
 
 if __name__ == "__main__":

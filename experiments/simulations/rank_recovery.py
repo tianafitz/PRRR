@@ -20,6 +20,7 @@ matplotlib.rcParams["text.usetex"] = True
 
 FIGURE_DIR = "../../figures/plots/"
 
+
 def association_mapping():
 
     n = 200
@@ -31,7 +32,7 @@ def association_mapping():
     n_repeats = 30
     latent_dim_list = np.arange(1, 11)
     elbo_list = np.zeros((n_repeats, len(latent_dim_list)))
-    
+
     for ii in range(n_repeats):
 
         ## Generate data from model
@@ -43,14 +44,21 @@ def association_mapping():
         size_factors = np.ones((n, 1))
         linear_predictor += np.log(size_factors)
         Y_mean = np.exp(linear_predictor)
-        
+
         Y = np.random.poisson(Y_mean)
 
         for jj, latent_dim in enumerate(latent_dim_list):
 
             # Fit PRRR
             grrr = GRRR(latent_dim=latent_dim)
-            grrr.fit(X=X, Y=Y, use_vi=True, n_iters=5000, learning_rate=1e-2, size_factors=size_factors)
+            grrr.fit(
+                X=X,
+                Y=Y,
+                use_vi=True,
+                n_iters=5000,
+                learning_rate=1e-2,
+                size_factors=size_factors,
+            )
             elbo = -grrr.loss_trace.numpy()[-1]
             elbo_list[ii, jj] = elbo
             print(elbo)
@@ -59,7 +67,9 @@ def association_mapping():
     results_df.to_csv("./out/rank_recovery_experiment.csv")
 
     plt.figure(figsize=(7, 5))
-    plt.errorbar(latent_dim_list, np.mean(elbo_list, axis=0), yerr=np.std(elbo_list, axis=0))
+    plt.errorbar(
+        latent_dim_list, np.mean(elbo_list, axis=0), yerr=np.std(elbo_list, axis=0)
+    )
     plt.axvline(r_true, linestyle="--", color="black")
     plt.xlabel("Rank")
     plt.ylabel("ELBO")
@@ -69,7 +79,9 @@ def association_mapping():
     plt.savefig("./out/rank_recovery_experiment.png")
     plt.show()
 
-    import ipdb; ipdb.set_trace()
+    import ipdb
+
+    ipdb.set_trace()
 
 
 if __name__ == "__main__":
