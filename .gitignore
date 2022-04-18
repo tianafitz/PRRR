@@ -7,6 +7,7 @@ __pycache__/
 *.h5ad
 *.mtx
 *.txt
+*.png
 scGeneFit-python-master/
 figures/
 # data/

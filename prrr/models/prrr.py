@@ -43,6 +43,7 @@ class PRRR:
             rate=tf.ones([1, self.q]),
             name="v0",
         )
+        v0 = tf.ones([1, self.q])
 
         predicted_rate = tf.multiply(tf.matmul(tf.matmul(X, U), V), v0)
 
@@ -100,9 +101,9 @@ class PRRR:
 
             # --------- Fit variational inference model using MC samples and gradient descent ----------
 
-            convergence_criterion = tfp.optimizer.convergence_criteria.LossNotDecreasing(
-                atol=1e-1
-            )
+            # convergence_criterion = tfp.optimizer.convergence_criteria.LossNotDecreasing(
+            #     atol=1e-1
+            # )
             optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 
             losses = tfp.vi.fit_surrogate_posterior(
@@ -110,13 +111,13 @@ class PRRR:
                 surrogate_posterior=surrogate_posterior,
                 optimizer=optimizer,
                 num_steps=n_iters,
-                convergence_criterion=convergence_criterion,
+                # convergence_criterion=convergence_criterion,
             )
             n_iters = optimizer._iterations.numpy()
 
             self.loss_trace = losses[:n_iters]
 
-            VU_mean = tf.exp(qVU_mean + 0.5 * tf.square(qVU_stddv))
+            U_mean = tf.exp(qU_mean + 0.5 * tf.square(qU_stddv))
             V_mean = tf.exp(qV_mean + 0.5 * tf.square(qV_stddv))
             v0_mean = tf.exp(qv0_mean + 0.5 * tf.square(qv0_stddv))
 
@@ -124,8 +125,8 @@ class PRRR:
                 "U": U_mean,
                 "V": V_mean,
                 "v0": v0_mean,
-                "A_lognormal_mean": qA_mean,
-                "A_lognormal_stddev": qA_stddv,
+                "U_lognormal_mean": qU_mean,
+                "U_lognormal_stddev": qU_stddv,
                 "V_lognormal_mean": qV_mean,
                 "V_lognormal_stddev": qV_stddv,
                 "v0_lognormal_mean": qv0_mean,
@@ -193,7 +194,7 @@ if __name__ == "__main__":
 
         prrr = PRRR(latent_dim=k_true)
         size_factors = np.ones((n, 1))
-        prrr.fit(X=X, Y=Y, use_vi=False, n_iters=5_000) #, size_factors=size_factors)
+        prrr.fit(X=X, Y=Y, use_vi=True, n_iters=5_000) #, size_factors=size_factors)
 
         U_est, V_est, v0_est = prrr.param_dict["U"].numpy(), prrr.param_dict["V"].numpy(), prrr.param_dict["v0"].numpy()
         preds = np.multiply(np.multiply(X @ U_est @ V_est, v0_est), prrr.size_factors)
