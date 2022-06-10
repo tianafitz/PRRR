@@ -12,4 +12,6 @@ scGeneFit-python-master/
 figures/
 # data/
 !data/gtex_expression_thyroid.csv
+bmc_submission/
+prrr_bmc_submission.zip
 
