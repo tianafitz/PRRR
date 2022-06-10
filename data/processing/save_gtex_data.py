@@ -17,7 +17,7 @@ EXPRESSION_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_RSEMv1.3.0_gene_expected_
 SUBJECT_METADATA_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
 SAMPLE_METADATA_PATH = "../gtex/GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt"
 
-NUM_GENES = 4000
+NUM_GENES = 10_000
 # TISSUE = "Thyroid"
 
 all_data_files = os.listdir("..")
@@ -82,7 +82,7 @@ def main():
 	expression_sample_ids = np.array(["-".join(x.split("-")[:3]) for x in expression_ids])
 	# assert np.all(np.unique(expression_sample_ids, return_counts=True)[1] == 1)
 
-	for curr_tissue in ["Muscle - Skeletal"]: # all_tissues:
+	for curr_tissue in ["Thyroid"]: # ["Muscle - Skeletal"]: # all_tissues:
 
 		# if "Brain" not in curr_tissue:
 		# 	continue

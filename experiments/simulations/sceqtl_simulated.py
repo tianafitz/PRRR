@@ -98,7 +98,9 @@ eqtl_plot_inner = [
 ]
 ax_dict = fig.subplot_mosaic(
     [["genotype", "expression", eqtl_plot_inner]],
-    gridspec_kw={"hspace": 0.5,}
+    gridspec_kw={
+        "hspace": 0.5,
+    },
 )
 # import ipdb; ipdb.set_trace()
 

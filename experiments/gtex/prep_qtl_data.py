@@ -45,7 +45,7 @@ genotype_tissues = np.array(
 eqtl_files = os.listdir(EQTL_DIR)
 
 # For each tissue, put together data
-for curr_tissue in metadata_tissues:
+for curr_tissue in ["Thyroid"]:  # metadata_tissues:
     # for curr_tissue in ['Thyroid']:
 
     print("Loading {}...".format(curr_tissue))
@@ -58,10 +58,10 @@ for curr_tissue in metadata_tissues:
     save_dir_tissue = pjoin(SAVE_DIR, "tissues", curr_genotype_tissue.strip())
 
     # Skip if we've already processed this tissue
-    if os.path.isdir(save_dir_tissue) and socket.gethostname() != "andyjones":
-        continue
-    else:
-        os.makedirs(save_dir_tissue)
+    # if os.path.isdir(save_dir_tissue) and socket.gethostname() != "andyjones":
+    #     continue
+    # else:
+    #     os.makedirs(save_dir_tissue)
 
     # Get list
     continue_flag = False
@@ -100,13 +100,17 @@ for curr_tissue in metadata_tissues:
     curr_snp_ids = curr_tissue_eqtls["variant_id"].unique()
 
     # curr_snp_ids = np.unique(curr_tissue_eqtls.variant_id.values[inset_idx])
-    qtl_snp_df = pd.DataFrame({'qtl_snps': curr_snp_ids})
+    qtl_snp_df = pd.DataFrame({"qtl_snps": curr_snp_ids})
 
     # Join QTL hit data and subject-specific genotype data
-    shared_snps_df = genotype_snp_df.merge(qtl_snp_df, right_on="qtl_snps", left_on="constVarID", how='left')
+    shared_snps_df = genotype_snp_df.merge(
+        qtl_snp_df, right_on="qtl_snps", left_on="constVarID", how="left"
+    )
 
     assert shared_snps_df.shape[0] == genotype_snp_df.shape[0]
-    assert np.array_equal(genotype_snp_df.constVarID.values, shared_snps_df.constVarID.values)
+    assert np.array_equal(
+        genotype_snp_df.constVarID.values, shared_snps_df.constVarID.values
+    )
 
     # Get indices where QTL snps had a match
     idx_to_keep = np.where(~shared_snps_df.qtl_snps.isna())[0] + 1
@@ -123,7 +127,9 @@ for curr_tissue in metadata_tissues:
 
     # Load the genotype data
     rows_to_skip = np.delete(idx_to_skip, np.argwhere(idx_to_skip == 0))
-    curr_genotypes = pd.read_table(genotype_file_path, index_col="constVarID", skiprows=rows_to_skip) #, usecols=cols_to_read)
+    curr_genotypes = pd.read_table(
+        genotype_file_path, index_col="constVarID", skiprows=rows_to_skip
+    )  # , usecols=cols_to_read)
 
     # Drop last row (weird pandas thing)
     curr_genotypes = curr_genotypes.iloc[:-1, :]
@@ -134,8 +140,6 @@ for curr_tissue in metadata_tissues:
 
     curr_genotypes.to_csv(pjoin(save_dir_tissue, "genotype.csv"))
 
-    # import ipdb
+    import ipdb
 
-    # ipdb.set_trace()
-
-
+    ipdb.set_trace()

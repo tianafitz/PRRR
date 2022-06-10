@@ -26,7 +26,7 @@ class GRRR:
     def __init__(self, latent_dim):
         self.latent_dim = latent_dim
 
-    def grrr_model(self, X, log_size_factors):
+    def grrr_model(self, X):
 
         U = yield tfd.Normal(
             loc=tf.zeros([self.p, self.latent_dim]),
@@ -49,8 +49,13 @@ class GRRR:
 
         linear_predictor = tf.matmul(tf.matmul(X, U), V) + v0
 
-        if log_size_factors is not None:
-            linear_predictor = tf.add(linear_predictor, log_size_factors)
+        if self.use_total_counts_as_size_factors:
+            size_factors = yield tfd.LogNormal(loc=self.Y_mean, scale=self.Y_stddev)
+            linear_predictor = tf.add(linear_predictor, size_factors)
+
+        elif self.log_size_factors is not None:
+            linear_predictor = tf.add(linear_predictor, self.log_size_factors)
+
 
         predicted_rate = tf.exp(linear_predictor)
 
@@ -58,24 +63,31 @@ class GRRR:
 
     def fit(self, X, Y, size_factors=None, use_total_counts_as_size_factors=True, use_vi=True, n_iters=2_000, learning_rate=1e-2):
 
+        self.use_total_counts_as_size_factors = use_total_counts_as_size_factors
+
         assert X.shape[0] == Y.shape[0]
         self.n, self.p = X.shape
         _, self.q = Y.shape
         X = X.astype("float32")
 
         if use_total_counts_as_size_factors and size_factors is None:
-            size_factors = np.sum(Y, axis=1).astype(float).reshape(-1, 1)
-        log_size_factors = np.log(size_factors)
-        self.size_factors = size_factors
+            # size_factors = np.sum(Y, axis=1).astype(float).reshape(-1, 1)
+            self.size_factors = None
+            self.Y_mean = np.mean(Y, axis=1).astype(np.float32).reshape(-1, 1)
+            self.Y_stddev = np.std(Y, axis=1).astype(np.float32).reshape(-1, 1)
+        else:
+            self.size_factors = size_factors
+            self.log_size_factors = np.log(size_factors)
+            
 
         # ------- Specify model ---------
 
-        rrr_model = functools.partial(self.grrr_model, X=X, log_size_factors=log_size_factors)
+        rrr_model = functools.partial(self.grrr_model, X=X)
 
         model = tfd.JointDistributionCoroutineAutoBatched(rrr_model)
 
-        def target_log_prob_fn(U, V, b0):
-            return model.log_prob((U, V, b0, Y))
+        def target_log_prob_fn(U, V, b0, size_factors):
+            return model.log_prob((U, V, b0, size_factors, Y))
 
         if use_vi:
 
@@ -169,10 +181,15 @@ class GRRR:
                 )
             )
 
+            size_factors = tfp.util.TransformedVariable(
+                tf.ones(shape=[self.n, 1]),
+                bijector=tfb.Softplus()
+            )
+
             optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 
             losses = tfp.math.minimize(
-                lambda: -target_log_prob_fn(U, V, v0),
+                lambda: -target_log_prob_fn(U, V, v0, size_factors),
                 optimizer=optimizer,
                 num_steps=n_iters,
                 # convergence_criterion=convergence_criterion,
@@ -185,6 +202,7 @@ class GRRR:
                 "U": U,
                 "V": V,
                 "v0": v0,
+                "size_factors": size_factors,
             }
 
         return

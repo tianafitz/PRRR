@@ -1,0 +1,609 @@
+%% BioMed_Central_Tex_Template_v1.06
+%%                                      %
+%  bmc_article.tex            ver: 1.06 %
+%                                       %
+
+%%IMPORTANT: do not delete the first line of this template
+%%It must be present to enable the BMC Submission system to
+%%recognise this template!!
+
+%\documentclass[twocolumn]{bmcart}% uncomment this for twocolumn layout and comment line below
+\documentclass{bmcart}
+
+%%% Load packages
+\usepackage{amsthm,amsmath}
+% \RequirePackage[numbers]{natbib}
+\RequirePackage[authoryear]{natbib}% uncomment this for author-year bibliography
+% \RequirePackage{hyperref}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc} %unicode support
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{amsfonts}
+\usetikzlibrary{automata,positioning}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{arrows,automata}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{bayesnet}
+\usetikzlibrary{arrows}
+
+%\usepackage[applemac]{inputenc} %applemac support if unicode package fails
+%\usepackage[latin1]{inputenc} %UNIX support if unicode package fails
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                             %%
+%%  If you wish to display your graphics for   %%
+%%  your own use using includegraphic or       %%
+%%  includegraphics, then comment out the      %%
+%%  following two lines of code.               %%
+%%  NB: These line *must* be included when     %%
+%%  submitting to BMC.                         %%
+%%  All figure files must be submitted as      %%
+%%  separate graphics through the BMC          %%
+%%  submission process, not included in the    %%
+%%  submitted article.                         %%
+%%                                             %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \def\includegraphic{}
+% \def\includegraphics{}
+
+%%% Put your definitions there:
+\startlocaldefs
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\endlocaldefs
+
+%%% Begin ...
+\begin{document}
+
+%%% Start of article front matter
+\begin{frontmatter}
+
+\begin{fmbox}
+\dochead{Methodology}
+\title{A Poisson reduced-rank regression model for association mapping in sequencing data}
+
+\author[
+  addressref={aff1},
+  email={tianaf@princeton.edu}
+]{\inits{T.F.}\fnm{Tiana} \snm{Fitzgerald}}
+\author[
+  addressref={aff1},
+  email={aj13@princeton.edu}
+]{\inits{A.J.}\fnm{Andrew} \snm{Jones}}
+\author[
+  addressref={aff1,aff2},
+  corref={aff1,aff2},
+  email={bee@princeton.edu}
+]{\inits{B.E.E.}\fnm{Barbara E.} \snm{Engelhardt}}
+
+\address[id=aff1]{
+  \orgdiv{Department of Computer Science},
+  \orgname{Princeton University},
+  \city{Princeton},
+  \cny{NJ}
+}
+\address[id=aff2]{
+  \orgdiv{Data Science and Biotechnology Institute},
+  \orgname{Gladstone Institutes},
+  \city{San Francisco},
+  \cny{CA}
+}
+
+\end{fmbox}% comment this for two column layout
+
+\begin{abstractbox}
+
+\begin{abstract} % abstract
+\parttitle{Background}
+Single-cell RNA sequencing (scRNA-seq) technologies allow for the study of gene expression in individual cells. Often, it is of interest to understand how transcriptional activity is associated with cell-specific covariates, such as cell type, genotype, or measures of cell health. Traditional approaches for this type of association mapping assume independence between the outcome variables (or genes), and perform a separate regression for each. However, these methods are computationally costly and ignore the substantial correlation structure of gene expression. Furthermore, count-based scRNA-seq data pose challenges for traditional models based on Gaussian assumptions.
+
+\parttitle{Results}
+We aim to resolve these issues by developing a reduced-rank regression model that identifies low-dimensional linear associations between a large number of cell-specific covariates and high-dimensional gene expression readouts. Our probabilistic model uses a Poisson likelihood in order to account for the unique structure of scRNA-seq counts. We demonstrate the performance of our model using simulations, and we apply our model to a scRNA-seq dataset, a spatial gene expression dataset, and a bulk RNA-seq dataset to show its behavior in three distinct analyses.
+
+\parttitle{Conclusion}
+We show that our statistical modeling approach, which is based on reduced-rank regression, captures associations between gene expression and cell- and sample-specific covariates by leveraging low-dimensional representations of transcriptional states.
+
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% The keywords begin here                  %%
+%%                                          %%
+%% Put each keyword in separate \kwd{}.     %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{keyword}
+\kwd{single-cell RNA-sequencing}
+\kwd{association mapping}
+\kwd{count-based models}
+\kwd{reduced-rank regression}
+\end{keyword}
+\end{abstractbox}
+
+%\end{fmbox}% uncomment this for two column layout
+
+\end{frontmatter}
+
+
+\section*{Background}
+Recent advances in high-throughput genomic assays have allowed for the creation of expansive data sets that are useful for exploring biological variation across cells. In particular, single-cell RNA-sequencing (scRNA-seq) technologies provide gene expression measurements at the individual cell level, allowing for the analysis of variation in transcriptional activity across cells within a single sample~\citep{tang2009mrna,sasagawa2013quartz,jaitin2014massively,zeisel2015cell}. While characterizing this variation is useful by itself for exploratory analysis, it is also of interest to study in a more targeted way how variation relates to cell-specific covariates, such as cell type, genotype, and cell health. Studying associations between gene expression and properties of single cells has the potential to enrich our understanding of the relationship between these covariates and transcription at single-cell resolution. 
+
+While methods for association studies have been widely developed for bulk RNA sequencing (RNA-seq) data~\citep{mccarthy2008genome,purcell2007plink}, methods for studying associations on the level of individual cells are much less developed. Moreover, there are several unique challenges in manipulating and analyzing the data generated by these single-cell assays, as compared to bulk RNA-seq assays. These scRNA-seq data sets are high dimensional --- there are tens of thousands of genes in the human genome --- which makes them difficult to interpret gene-by-gene; furthermore, the count-based nature of the data --- made up of counts of sequenced RNA fragments that map to a specific gene in a genome to approximate expression levels of that gene --- presents a challenge for many standard statistical tools that make Gaussian assumptions~\citep{GWASstatmethods}. 
+
+In this paper, we propose a statistical modeling approach based on reduced-rank regression that captures associations between gene expression and cell- and sample-specific covariates by leveraging low-dimensional representations of transcription. Within this framework, we propose two specific models: Poisson reduced-rank regression (PRRR), which adapts a generalized linear model to the reduced rank setting, and nonnegative Poisson reduced-rank regression (nn-PRRR), which provides interpretable nonnegative regression components. In what follows, we first review several related threads of research, and describe our modeling approach. Then, using simulated data and single-cell RNA-seq, bulk RNA-seq, and spatial gene expression experiments, we show that our models are useful for a wide range of association study types, including studying the transcriptional hallmarks of cell types, genotypes and eQTLs, and genes correlated with disease status. 
+
+\subsection*{Genome-Wide Association Studies}
+\label{section:gwas}
+Since the completion of the Human Genome Project in 2003~\citep{genomeproj} and the HapMap project in 2005~\citep{hapmap}, researchers have developed the genomic and statistical tools necessary to study the human genome at a large scale in order to better detect, treat, and prevent diseases. Genome-wide association studies (GWAS) are used to identify disease-causing genetic variation across complete genomes. Genetic variation often comes in the form of single nucleotide polymorphisms (SNPs) that can be compared between healthy patient and patients with a disease~\citep{plos}. GWAS approaches have found a plethora of gene variants that are associated with common diseases such as asthma, type 2 diabetes, and more~\citep{ober2011meta,frayling2007genome}. 
+
+In a similar vein, quantitative trait loci (QTL) studies identify associations between genetic variants and quantitative phenotypes by examining molecular markers~\citep{zeng1994precision,doerge2002mapping}. A common experimental setup is to use gene expression levels as the molecular marker, in which case the study is referred to as an expression QTL (eQTL)~\citep{nica2013expression,kendziorski2006statistical}.
+Most eQTL studies have relied on bulk RNA-seq technologies to measure the gene expression levels of entire tissues~\citep{pickrell2010understanding,aguet2017genetic, gtex2020gtex}. 
+
+In this context, the statistical eQTL problem is to estimate the pairwise association between a set of genetic variants (the covariates or explanatory variables) and the expression level of each gene (the outcome variables). This is typically performed using a linear regression model. In particular, let $\mathbf{X}$ be an $N\times P$ matrix containing information about genetic variants across $P$ SNPs for $N$ individuals or tissue samples, and let $\mathbf{Y} \in \mathbb{R}^{N \times Q}$ be a matrix of corresponding gene expression levels across $Q$ genes in these individuals or tissues. eQTL approaches typically use a linear model to find associations between genotype and phenotype, estimating these relationships~\citep{GWASstatmethods}. Generically, these approaches use a model of the form
+\begin{equation}
+    \mathbf{y}_{\cdot q} = \mathbf{x}_{\cdot p} b_{pq} + \boldsymbol{\epsilon}, \label{eq:linearmodel}
+\end{equation}
+where $\mathbf{x}_{\cdot p}$ is the $p$th column of $\mathbf{X}$, $\mathbf{y}_{\cdot q}$ is the $q$th column of $\mathbf{Y}$, $\boldsymbol{\epsilon} \in \mathbb{R}^{N}$ is a vector of independent zero-mean Gaussian-distributed noise terms, and $b_{pq} \in \mathbb{R}$ is a scalar coefficient representing the linear relationship between SNP $p$ and gene $q$ for $p = 1, \dots, P$ and $q = 1,\dots, Q$.
+Downstream tests for significance can be performed on these coefficients to identify associations~\citep{li2008methods,wu2011rare,lee2012optimal}.
+Without further assumptions, this model estimates the marginal association between single SNPs and single genes independently. 
+To accommodate polygenic contributions to phenotypes, multivariate models of the form 
+\begin{equation}
+    \mathbf{Y} = \mathbf{X} \mathbf{B} + \boldsymbol{\epsilon}, \label{eq:linearmodel_matrix_form}
+\end{equation}
+have been considered, where $\mathbf{B} \in \mathbb{R}^{P \times Q}$ is a matrix of coefficients~\citep{hoggart2008simultaneous,logsdon2010variational,wu2009genome}. Under this framework, sparsity-inducing priors for $\mathbf{B}$ have been proposed in order to scale these models to high-dimensional data~\citep{li2011bayesian,li2015bayesian}. 
+
+The advent of scRNA-seq technologies has opened the door for narrowing the investigation of genotype-phenotype relationships from the level of whole tissues to the level of individual cells. However, existing computational tools are insufficient for this purpose: they typically do not accommodate count-based data, and they are seldom robust to high-dimensional outcome variables. It is difficult to control the hypothesis testing error rate in many eQTL analyses, which run millions to trillions of univariate association hypothesis tests (one for each SNP-gene pair)~\citep{GWASstatmethods,gtex2020gtex,aguet2017genetic,karczewski2021systematic,willer2013discovery}.
+
+\subsection*{Count-based models}
+A further drawback of existing association testing frameworks is their assumption of Gaussian-distributed data. Most canonical regression models assume an independent normally-distributed response variable, with $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}_N)$ in Equation \eqref{eq:linearmodel}. However, when the data consist of count-based measurements, this assumption may be problematic. Various transformations have been proposed to make the response variable approximately Gaussian~\citep{butler2018integrating,yu2009variance},
+but these transformations are known to distort the data distribution in undesirable ways~\citep{townes_feature_2019,booeshaghi2021normalization,hafemeister2019normalization}.
+Count-based scRNA-seq data is discrete and nonnegative, with many gene expression counts having a value of zero. The sparsity of the data poses a challenge to these standard transformations~\citep{townes_feature_2019}.
+
+An alternative to this approach is to model the gene expression data with a discrete distribution. A common choice is the Poisson distribution, whose support is restricted to the nonnegative integers and has been shown to improve the representation and interpretation of scRNA-seq data when fitting statistical models~\citep{townes_feature_2019,jones2021contrastive}. A recent approach using a Poisson data likelihood proposed a naive Bayes model that assigns cell-type identities to samples in scRNA-seq data based on reference data~\citep{Grabski2020.01.05.895441}. The model uses a Poisson distribution to represent the count-based data, but the high number of zeros in the data still poses a challenge. The sparsity of the data interferes with standard estimates such as maximum likelihood estimates as rates of zero can be produced for thousands of genes, making the model sensitive to genes with low expression counts~\citep{Grabski2020.01.05.895441}. The model handles this challenge by introducing a hierarchical structure, placing posterior distributions on parameters in order to recover non-zero rate estimates for genes with zero counts in the reference data. However, the naive Bayes model also assumes independence between genes, but this assumption does not hold in practice, as expression has been observed to be correlated between genes~\citep{satija,townes_feature_2019,van2018gene}.
+
+\subsection*{Modeling multiple data modalities}
+Latent variable modeling approaches have also been proposed for modeling multi-view data. The most popular approach has been canonical correlation analysis (CCA, \citep{hotelling1992relations}) and its probabilistic variants~\citep{bach2005probabilistic,zhao2016bayesian,argelaguet2018multi}. CCA seeks a low-dimensional linear mapping of each dataset such that the resulting low-dimensional vectors are maximally correlated.
+\begin{equation*}
+    \max \rho(\mathbf{X} \mathbf{u}, \mathbf{Y} \mathbf{v})~~~~\text{subject to } \mathbf{u}^\top \mathbf{u} = 1, \mathbf{v}^\top \mathbf{v} = 1,
+\end{equation*}
+where $\rho$ is the Pearson correlation function. The probabilistic version of this model projects the features of each data modality into a shared low-dimensional latent space, assuming heteroskedastic residual errors, maximizing the amount of variance explained in the data modalities by the latent subspace. The weights, or factor loadings, in CCA models allow us to identify covarying features across data modalities. A formal connection between CCA and reduced-rank regression has been shown~\citep{tso1981reduced}, where the canonical subspace found by CCA is the same as the subspace of the maximum likelihood estimator for the reduced-rank regression model. Despite their connections, the unsupervised nature of CCA does not lend itself directly to association mapping between the data modalities. Conversely, reduced-rank regression has a natural association testing framework because of its regression foundation.
+
+Recently, a latent variable model based on latent Dirichlet allocation~\citep{blei2003latent,pritchard2000inference} for jointly modeling gene expression and genotype was proposed~\citep{gewirtz2021telescoping}. This model projected both genotype data --- using an equivalent of the Structure model~\citep{pritchard2000inference} --- and count-based gene expression data --- using a telescoping LDA model~\citep{blei2003latent} --- onto a shared latent subspace; we may then identify covarying genes and gentoypes in a nonnegative latent representation. But discovering associations in this framework requires association testing in held-out data, which is limited by existing univariate methods and population data.
+
+\subsection*{Reduced-Rank Regression Approaches}
+The transcriptional states of cells tend to exhibit strong correlation between genes~\citep{stuart2003gene}. Thus, it is likely that the relationship between cell covariates and transcriptional phenotypes in scRNA-seq data need not be modeled gene-by-gene. Rather, it is reasonable to assume that these associations exhibit low-dimensional structure. Furthermore, treating each gene as independent is computationally and statistically inefficient; we would like to exploit these relationships to perform fewer association tests and leverage shared variation to improve statistical power in these often small sample sizes. These ideas motivate a regression model whose coefficient matrix has low rank. Several approaches to reduced-rank regression have been developed to take advantage of this opportunity.
+
+Consider again the linear regression model in Equation \eqref{eq:linearmodel_matrix_form}. Here, $\mathbf{B}$ is a $P\times Q$ matrix of regression coefficients, where $P$ is the number of covariates, and $Q$ is the number of genes. In most gene expression studies, $Q$ (and sometimes $P$) is large, and $\min(P, Q) \gg n$. The core assumption of reduced-rank regression (RRR) is that the matrix $\mathbf{B}$ has low rank~\citep{anderson1951estimating}. In particular, the RRR model assumes $\mathbf{B}$ has rank $R \ll \min(P, Q)$. This implies that $\mathbf{B}$ can be factorized as an outer product of two low-rank matrices, giving us the following reduced-rank regression model:
+\begin{equation}
+    \mathbf{Y} = \mathbf{X} \mathbf{B} + \boldsymbol{\epsilon}~~~~\text{subject to } \mathbf{B} = \mathbf{U} \mathbf{V}^\top, \label{eq:rrr_model}
+\end{equation}
+where $\mathbf{U} \in \mathbb{R}^{P \times R}$ and $\mathbf{V} \in \mathbb{R}^{Q \times R}$. In the context of gene expression studies, this low-rank assumption implies that the relationship between cell-specific covariates and gene expression can be described in terms of a small set of latent factors. In other words, variance in gene expression is mediated by $R$ different programs encoded in subsets of covariates; then $\mathbf{B}$ captures both the covariates of interest and their effect sizes within each of the $R$ programs.
+
+Several estimation approaches have been proposed for RRR under the assumption of Gaussian noise. A common method is to find the parameter values that minimize the squared reconstruction error~\citep{anderson1951estimating,reinsel1998multivariate}:
+\begin{equation*}
+    \min_{\mathbf{U}, \mathbf{V}} \|\mathbf{Y} - \mathbf{X} \mathbf{U} \mathbf{V}^\top\|_2^2.
+\end{equation*}
+This approach corresponds to finding the maximum likelihood solution of an RRR model with Gaussian errors ($\boldsymbol{\epsilon}_q \sim \mathcal{N}(0, \sigma^2 \mathbf{I})$ for $q = 1, \dots, Q$ in Equation \ref{eq:rrr_model} as $\sigma^2 \to 0$). When $\mathbf{B}$ is assumed to have full rank (that is, $R = \min(P, Q)$) the minimization admits the ordinary least squares (OLS) solution:
+\begin{equation*}
+    \widehat{\mathbf{B}}_{OLS} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y}.
+\end{equation*}
+When $R < \min(P, Q)$, the RRR model has an eigenvalue solution:
+\begin{equation*}
+    \widehat{\mathbf{B}}_{RRR} = \widehat{\mathbf{B}}_{OLS} \mathbf{U}_{1:R} \mathbf{U}_{1:R}^\top,
+\end{equation*}
+where $\mathbf{X} \widehat{\mathbf{B}}_{OLS} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ is the SVD of the fitted values, and $\mathbf{U}_{1:R} = [\mathbf{u}_1, \cdots, \mathbf{u}_R]$ contains the leading $R$ left singular vectors of $\mathbf{X} \widehat{\mathbf{B}}_{OLS}$.
+
+Sparse approaches to RRR have been proposed as well. Sparsity in the decomposition leads to greater interpretability by including nonzero weights only on a subset of the covariates and genes for any component. One model~\citep{Qian2020.05.30.125252} imposes sparsity on the coefficient matrix $\mathbf{B}$ by taking an iterative approach to estimation, solving both a sparse regression problem and the reduced-rank decomposition in alternating frames. The base algorithm solves the following optimization problem:
+\begin{equation*}
+    \min_{\mathbf{U}, \mathbf{V}} \frac{1}{2} \|\mathbf{Y}-\mathbf{X}\mathbf{U}\mathbf{V}^\top\|_2^2 + \lambda \sum^{p}_{j=1}\|\mathbf{U}_j\|_2,
+\end{equation*}
+where $\mathbf{U} \in \mathbb{R}^{P \times R}$, $\mathbf{V} \in \mathbb{R}^{Q \times R}$, $\mathbf{U}_p$ represents the $p$th row of $\mathbf{U}$, the rank $R$ is specified by the modeler, and $\lambda$ is a sparsity penalty parameter. The alternating minimization problem can be broken into two steps: optimizing $\mathbf{U}$, and optimizing $\mathbf{V}$. After parameter initialization on iteration $\ell = 1$, on iteration $\ell = 2, \dots, L$, the algorithm first solves an orthogonal Procrustes problem for $\mathbf{V}$:
+\begin{equation} \label{eq:alternating_step1}
+    \mathbf{V}^{(\ell)} = \argmin_{\mathbf{V}:\mathbf{V}\mathbf{V}^\top=\mathbf{I}} \|\mathbf{Y} - \mathbf{X}\mathbf{U}^{(\ell - 1)}\mathbf{V}^\top\|_2^2,
+\end{equation}
+where $\mathbf{U}^{(\ell - 1)}$ is the estimate of $\mathbf{U}$ from the previous iteration. The algorithm then solves a group lasso problem for $\mathbf{U}$:
+\begin{equation} \label{eq:alternating_step2}
+    \mathbf{U}^{\ell} = \argmin_{\mathbf{U}} \frac{1}{2} \|\mathbf{Y}\mathbf{V}^{(\ell)}-\mathbf{X}\mathbf{U}\|_2^2 + \lambda \sum^{P}_{p=1} \|\mathbf{U}_j\|_2.
+\end{equation}
+Equation \eqref{eq:alternating_step1} can be solved using a singular value decomposition, and Equation \eqref{eq:alternating_step2} can be solved using techniques for group lasso~\citep{friedman2010note}. These two steps are repeated for $L$ steps or until convergence.
+
+Another approach developed a Bayesian RRR framework for association mapping in the GWAS setting~\citep{valente2015nonparametric}. The model --- called Bayesian Extendable Reduced-Rank Regression (BERRRI) --- uses a nonparametric Indian Buffet Process prior for the latent factors, which allows the rank $k$ to be estimated from the data. BERRRI then uses a variational Bayes approximation to the posterior for inference of the model parameters. However, BERRRI does not explicitly model count-based data, and its inference procedure is not computationally tractable for genome-scale analyses. 
+
+The linear RRR model has been generalized to nonlinear functions as well. The most popular nonlinear approaches have used neural networks with multiple inputs and multiple outputs~\citep{diamantaras1994multilayer}. The linear RRR model is equivalent to a single-layer multi-layer perceptron with only linear transformations between layers~\citep{baldi1989neural,kunin2019loss}. This model can be extended to the nonlinear case by including nonlinear activation functions~\citep{baldi1989neural,aoyagi2005stochastic}. However, these models typically to do not capture count data and lack the interpretability of linear models for downstream association testing.
+
+In this manuscript, we propose a statistical model and associated computational framework that addresses the problems that arise with modeling genotype-phenotype associations for high-dimensional phenotypes captured with count data. We propose a reduced-rank regression model that finds low-dimensional associations between genotypes (or other high-dimensional covariates) and and RNA-sequencing data (or other high-dimensional count-based phenotypes). Relying on low-dimensional associations alleviates the problem of estimating millions of pairwise associations. Furthermore, our model uses count-based likelihoods that allows both single-cell RNA-sequencing data and bulk RNA-sequencing. We show that our approach appropriately models gene expression data with count-based likelihoods, leads to interpretable subsets of genes and genetic variants in each dimension, and uses flexible, computationally tractable inference methods that allow for uncertainty quantification.
+
+\section*{Methods}
+We propose a probabilistic reduced-rank regression model with a Poisson data likelihood --- which we call Poisson reduced-rank regression (PRRR) --- for association mapping in count-based sequencing data. Our approach takes the form of a reduced-rank regression model with intermediate factors that explicitly model count-based data using a Poisson likelihood. These factors are interpretable and can be used to to identify and analyze the global structure of associations between cell covariates and cell phenotypes, such as gene expression levels. We ensure that inference is tractable and efficient in these models by leveraging a stochastic variational inference approach.
+
+\subsection*{Poisson Reduced-Rank Regression (PRRR)}
+PRRR is designed to identify associations between cell-specific covariates and high-dimensional gene expression profiles. The response matrix $\mathbf{Y} \in \mathbb{N}_0^{N \times Q}$ is a matrix containing (in this application) RNA transcript counts for $Q$ genes in $N$ cells, where $\mathbb{N}_0 = \mathbb{N}\cup 0$. The $N \times P$ matrix $\mathbf{X}$ is a design matrix containing covariates for each cell. For example, these covariates could represent cell type, genotype, or measures of cell health.
+
+PRRR uses a Poisson likelihood to model the transcript counts for each cell as the response variables, conditional on observed cell-specific covariates. The Poisson rate is parameterized by a low-rank linear mapping from the cell covariates. 
+
+Specifically, the transcript count of gene $p$ in cell $n$, denoted by $y_{np}$ is modeled as a draw from a Poisson distribution, $y_{np} \sim \text{Poisson}(\lambda_{np})$. The Poisson rate $\lambda_{np}$ is determined by a linear function of the vector of covariates for cell $n$, denoted as $\mathbf{x}_n$. 
+We use a canonical link function from the exponential family to map the domain of the latent variables to the positive real line --- similar to a GLM approach. In particular, we use a $\log$ link function to ensure that, when pushed through the inverse link --- the $\exp$ function --- the linear predictor lies in $\mathbb{R}_+$. The likelihood model is then
+\begin{equation}
+    y_{np} | \mathbf{U}, \mathbf{V}, \mathbf{x}_n \sim \text{Poisson} (\exp(\mathbf{x}_n \mathbf{U}\mathbf{v}_{p\cdot}^\top)), \label{eq:gprrr1}
+\end{equation}
+where $\mathbf{v}_{p\cdot}$ is the $p$th row of $\mathbf{V}$. We place Gaussian priors on columns of $\mathbf{U}$ and $\mathbf{V}$:
+\begin{equation}
+\mathbf{u}_{r} \sim \mathcal{N}(\mathbf{0}, \sigma^2_1 \mathbf{I}_P),~~~\mathbf{v}_{r} \sim \mathcal{N}(\mathbf{0}, \sigma^2_2 \mathbf{I}_Q),
+\end{equation}
+for $R = 1, \dots, R$. Intuitively, $\mathbf{U}$ and $\mathbf{V}$ capture the low-rank associations between $\mathbf{X}$ and $\mathbf{Y}$.
+
+\subsubsection*{Nonnegative PRRR}
+In some cases, the covariates $\mathbf{X}$ are entirely nonnegative --- possibly representing counts or categories --- in which case it may be of interest to identify nonnegative, low-rank regression coefficients that explain the associations in a completely additive fashion. For example, in eQTL mapping, the covariates are typically the count of the minor allele for each SNP, where $\mathbf{x}_n \in \{0, 1, 2\}$, and it may be of interest to identify a nonnegative, ``parts-based'' combination of SNPs that explain phenotypic variation. For these cases, we propose nonnegative Poisson reduced-rank regression (nn-PRRR), whose likelihood is given by
+\begin{equation}
+    y_{np} | \mathbf{U}, \mathbf{V}, \mathbf{x}_n \sim \text{Poisson} (s_n \mathbf{x}_n^\top \mathbf{U} \mathbf{v}_{p\cdot}^\top), \label{eq:prrr1}
+\end{equation}
+where $s_n$ is a cell-specific size factor modeling the total number of transcripts in cell $i$. We fix $s_n$ to be the total number of transcript counts in cell, $s_n = \sum_{j=1}^p y_{np}$. We place Gamma priors on the elements of $\mathbf{U}$ and $\mathbf{V}$:
+\begin{equation}
+    u_{pr} \sim \text{Gamma}(\alpha_u, \beta_u),~~~v_{qr} \sim \text{Gamma}(\alpha_v, \beta_v)
+    \label{eq:prrr3}
+\end{equation}
+for $p = 1,\dots,P$, $q = 1, \dots, Q$, and $R = 1, \dots, R$. For all experiments, we set $\alpha_u=\alpha_v=2$ and $\beta_u=\beta_v=1$.
+
+\subsection*{Estimation and inference}
+We propose two approaches to fit our model to data: 1) computing a point estimate for the coefficients using maximum \emph{a posteriori} (MAP) estimation and 2) full Bayesian posterior inference for the regression coefficients using an approximate inference procedure.
+
+\subsubsection*{MAP estimation}
+The MAP solution in our model is the coefficient matrices $\mathbf{U}_{MAP}, \mathbf{V}_{MAP}$ with maximum posterior probability given the data $\mathbf{X}$ and $\mathbf{Y}$. In particular,
+\[
+\mathbf{U}_{MAP}, \mathbf{V}_{MAP} = \argmax_{\mathbf{U}, \mathbf{V}} p(\mathbf{U}, \mathbf{V} | \mathbf{X}, \mathbf{Y}).
+\]
+Expanding the posterior with Bayes' rule, we can write the MAP objective as $\max_{\mathbf{U}, \mathbf{V}} p(\mathbf{Y} | \mathbf{X}, \mathbf{U}, \mathbf{V}) p(\mathbf{U}, \mathbf{V}) / Z,$
+where $Z$ is a normalizing constant that does not depend on $\mathbf{U}$ or $\mathbf{V}$. Taking a $\log$, dropping the constant $Z$, and leveraging the i.i.d. assumption, we arrive at our final MAP objective:
+\[
+\max_{\mathbf{U}, \mathbf{V}} \log p(\mathbf{U}, \mathbf{V}) + \sum\limits_{n=1}^N \log p(\mathbf{y}_n | \mathbf{x}_n, \mathbf{U}, \mathbf{V}).
+\]
+Although this maximization problem does not have a closed-form solution, we use gradient-based methods to iteratively maximize this log posterior with respect to $\mathbf{U}$ and $\mathbf{V}$.
+
+\subsection*{Variational inference}
+A fully Bayesian approach to inference, given a set of samples with paired cell covariates and transcript counts, $\{(\mathbf{x}_n, \mathbf{y}_n)\}_{n=1}^N$, would compute the posterior distribution of the parameters, $\mathbf{U}$ and $\mathbf{V}$, given the data matrices $\mathbf{X}$ and $\mathbf{Y}$. By Bayes' rule,
+\begin{equation*}
+    p(\mathbf{U}, \mathbf{V} | \mathbf{X}, \mathbf{Y}) = \frac{\mathbf{Y} | p(\mathbf{X}, \mathbf{U}, \mathbf{V}) p(\mathbf{U}, \mathbf{V})}{p(\mathbf{X}, \mathbf{Y})}.
+\end{equation*}
+However, the marginal likelihood, $p(\mathbf{X}, \mathbf{Y})$, contains an intractable integral,
+\begin{equation}
+    p(\mathbf{X}, \mathbf{Y})=\int_{\mathbf{U}, \mathbf{V}} p(\mathbf{Y} | \mathbf{X}, \mathbf{U}, \mathbf{V}) p(\mathbf{U}, \mathbf{V}) d\mathbf{U}d\mathbf{V}.
+\end{equation}
+
+To circumvent this issue, we use a variational approximation to the posterior. Specifically, we use a mean-field variational approximation, $p(\mathbf{U}, \mathbf{V}) \approx q(\mathbf{U}, \mathbf{V}) = q_1(\mathbf{U})q_2(\mathbf{V})$, where $q_1$ and $q_2$ are the variational distributions. Here, we specify the variational families for PRRR and nn-PRRR to be normal and log normal, respectively,
+\begin{align}
+    q(u_{pr}) &= \mathcal{N}(\mu_1, \sigma^2_1),~~~~~~~~q(v_{qr}) = \mathcal{N}(\mu_2, \sigma^2_2), & \text{(PRRR)} \\
+    q(u_{pr}) &= \text{Log$\mathcal{N}$}(\mu_1, \sigma^2_1),~~~q(v_{qr}) = \text{Log$\mathcal{N}$}(\mu_2, \sigma^2_2). & \text{(nn-PRRR)}
+\end{align}
+We minimize the KL divergence between the true posterior and the variational approximation, which is equivalent to maximizing a lower bound on the model evidence (called the ELBO). This lower bound for PRRR is given by
+\begin{equation*}
+    p(\mathbf{X}, \mathbf{Y}) \geq \mathcal{L} := \mathbb{E}_{q(\mathbf{A})q(\mathbf{B})}\left[ \frac{p(\mathbf{X}, \mathbf{Y}, \mathbf{U}, \mathbf{V})}{q(\mathbf{U})q(\mathbf{V})}. \right]
+\end{equation*}
+We maximize this lower bound with respect to the variational parameters using stochastic variational inference~\citep{hoffman2013stochastic} as implemented in TensorFlow Probability~\citep{dillon2017tensorflow}. For all experiments, we use the Adam optimizer~\citep{kingma2014adam} with a learning rate of $0.01$.
+
+\section*{Results}
+\subsection*{Simulation experiments}
+We first demonstrate the use cases of PRRR and test the robustness and accuracy of our model using simulated data.
+
+\subsubsection*{PRRR identifies low-dimensional association maps}
+We first sought to confirm that PRRR identifies the low-dimensional relationships between covariates and outcomes. 
+
+To start in a setting that can be visualized, we generated a synthetic dataset in which the covariates and outcomes are both two-dimensional. Specifically, we sampled data from the generative model (Equations \eqref{eq:prrr1}-\eqref{eq:prrr3}), setting $R=1$. We forced a correlation between the covariates and outcomes. We found that PRRR could reliably detect the one-dimensional association between $\mathbf{X}$ and $\mathbf{Y}$ (\autoref{fig:fig1}).
+Moreover, we are able to recover a quantification of the relationship between the covariates and outcomes, and visualize this relationship in the low-dimensional space. 
+
+We next extended this simulation study and visualization to a small-scale synthetic eQTL study. We generated $N = 200$ synthetic genotypes based on minor allele counts, $\mathbf{x}_n \in \{0, 1, 2\}$, and sampled synthetic RNA transcript counts using the PRRR generative model, with $P=Q=2$ for visualization.
+We fit PRRR to these data and inspected the fitted coefficients. We found that PRRR recovered these genotype-expression relationships, and allowed for both inspection of the low-dimensional structure of these relationships, as well as investigating univariate relationships (\autoref{fig:toy_example_sceqtl}). This experiment suggests that PRRR may be useful to perform eQTL mapping.
+
+\subsubsection*{PRRR identifies the optimal rank and is robust to misspecification}
+PRRR, like other reduced-rank regression approaches, requires selecting the rank $R$ of the coefficient matrix. A common approach is to evaluate the goodness-of-fit of the model at varying values of $R$, and select the one with the best fit to the data. To test whether this is feasible with PRRR, we use synthetic data that was generated from PRRR's generative model with true rank $R^\star=3$. We then fit the model with $R \in \{1, 2, \dots, 10\}$ and compute the ELBO for each fit. We repeated this experiment $30$ times for each value of $R$.
+
+We find that the PRRR ELBO peaked at the true value of $R=3$ (\autoref{fig:rank_recovery_and_highdim_prediction}a), demonstrating that the model's fit to the data was best at the true rank $R^{\star}$. Moreover, we found that while the goodness-of-fit sharply degraded for models with $R < R^\star$, the goodness-of-fit declined more slowly for models with $R > R^\star$. This finding confirms similar observations from previous studies~\citep{Qian2020.05.30.125252}, and suggests that setting the rank to be higher than anticipated is protective against model misspecification.
+
+\subsubsection*{PRRR is robust to data dimension}
+We next sought to validate the robustness of PRRR in the presence of higher-dimensional data. To do so, we generated three datasets from the PRRR model, each with a different number of response features (genes), $Q \in \{10, 50, 100\}$. We set the sample size to $N = 200$, and we randomly selected $80\%$ of these samples to fit the model and held out the remaining $20\%$ to test the model.
+We fit PRRR on the training data using our MAP estimation procedure and used the estimated parameters to compute the predicted Poisson rate for the held-out data, $\widehat{\lambda}_{np} = \exp(\mathbf{x}_n \widehat{\mathbf{U}}\widehat{\mathbf{v}}_{p\cdot}^\top$. We then computed the goodness-of-fit $R^2$ measure between our predictions and the held-out dataset's counts. To benchmark these predictions, we compared PRRR's predictive performance to two competing methods: a full-rank version of PRRR and a multi-output LASSO model, as implemented in the R package glmnet~\citep{friedman2010note}. We repeated this experiment ten times for each method and each data-generating condition.
+
+We found that PRRR reliably achieves good predictive performance across all values of the outcome dimension $Q$ (Figure~\ref{fig:rank_recovery_and_highdim_prediction}b). In contrast, the full-rank and LASSO models performed worse. 
+
+To further validate PRRR and nn-PRRR on different data types, we conducted a similar experiment with synthetic data generated using Splatter~\citep{zappia2017splatter}, a data simulator designed specifically for single-cell count data. We generated data for $N=200$ samples, each belong to one of $10$ groups, and used $Q=100$ genes. We used the one-hot encoded group labels as the covariates and the synthetic gene expression as the response. We fit PRRR and nn-PRRR with $R=5$, along with Gaussian RRR and full-rank Poisson regression, and we reserved a hold-out set for evaluating predictions. We found that PRRR and nn-PRRR outperformed competing models in terms of their predictive $R^2$ values (\autoref{fig:rank_recovery_and_highdim_prediction}c).
+
+These results suggest that accounting for the count-based data and the low-rank structure of associations is vital, and that the PRRR model successfully captures this structure. 
+
+\subsubsection*{PRRR predictions are robust to rank misspecification}
+To further explore the role of rank specification in our model, we performed a prediction experiment for varying settings of the rank. We generated synthetic data as before with $R^\star = 3$ and fit the model on $80\%$ of the data while reserving $20\%$ for testing. For a range of ranks, $R \in \{1, 2, 3, 4, 5, 10, 20\}$, we fit PRRR, used the fitted model to make predictions for the held-out data, and computed the $R^2$ coefficient of determination for these predictions. We performed this experiment using both maximum a posteriori (MAP) estimation and variational inference to fit the model, repeating the experiment ten times for each rank in both cases. 
+
+We found that the predictive performance was strongest when the model was correctly specified ($R = 3$ in this case; \autoref{fig:prediction_figure}a, b). However, we observed that performance was strong across a range of misspecified ranks as well. Similar to our previous experiment, we observed that predictions were more robust for models with $R > R^\star$ as compared to models with $R < R^\star$.
+
+To benchmark these predictions, we compared PRRR's predictive performance to two competing methods: a reduced-rank regression that assumes a Gaussian likelihood~\citep{anderson1951estimating} and the multi-output LASSO model~\citep{friedman2010note}. We performed a similar prediction experiment as above, computing the $R^2$ for each model under a range of rank specifications. We found that PRRR outperformed the two competing methods in a range around the true rank $R^\star = 3$ (\autoref{fig:prediction_figure}c).
+
+\subsection*{Characterizing transcriptional hallmarks of pancreatic cell types}
+It has been widely observed that cell type is a major driver of transcriptional variation between cells in a variety of tissue types~\citep{zheng2017massively,kotliar2019identifying,zeisel2015cell,chen2017single}. Given these observed differences between cell types, it is of interest to identify the gene expression patterns that are characteristic of each cell type. Our PRRR models present a principled approach for identifying these transcriptional hallmarks of cell types by finding a low-dimensional mapping from cell type to expression.
+
+To test this, we fit PRRR to an scRNA-seq dataset containing 1,578 cells that span $C=14$ unique cell types in the human pancreas~\citep{baron2016single}. For cell $n$, we encode its cell type as a one-hot vector $\mathbf{x}_n \in \{0, 1\}^{C}$, and we treat the response variable $\mathbf{y}_n$ as the vector of RNA transcript counts in this cell. We extracted the coefficient matrices $\mathbf{U}$ and $\mathbf{V}$ and studied their properties.
+
+We found that PRRR was able to identify transcriptional markers in each cell type. Among the 14 unique cell types present in the dataset, there are five that belong to the family of islet cells (\emph{alpha}, \emph{beta}, \emph{gamma}, \emph{delta}, and \emph{epsilon} cells). Given their functional relatedness, these cell types are expected to show similar gene expression patterns compared to patterns found in other cell types. Indeed, inspecting PRRR's estimated coefficients, we find that the model captures the low-dimensional gene expression patterns in islet cells (\autoref{fig:coeff_matrix_grrr_heatmap}). We performed a hierarchical clustering on the PRRR coefficients, which revealed that the islet cells clustered together (\autoref{fig:coeff_matrix_grrr_heatmap}). We found a similar clustering after fitting nn-PRRR on the same dataset (Supplementary Figure 2). %\ref{fig:pancreas_nn-prrr_coeffs}).
+Moreover, we observed that the models separated islet cell types from non-islet cell types in the low-dimensional space (\autoref{fig:pairplot_grrr_5x5}). Examining the factor loadings for each cell type, we found that specific factors were especially enriched for islet or non-islet cell types (\autoref{fig:pancreas_factor_loadings_figure}). The islet-related factors were enriched for pancreatic gene pathways, such as \emph{pancreas beta cells}. 
+
+We also extracted the top genes for each cell type from the full PRRR coefficient matrix; these genes can be viewed as ``marker genes'' whose expression is correlated with certain cell type identities. We found that these marker genes corresponded to cell-type-specific transcription patterns, such as \emph{REG1B} being the top marker gene for \emph{acinar} cells (Supplementary Figure 3). %\autoref{fig:pancreas_marker_genes_table}). 
+
+These findings imply that the low-dimensional space may be used to compare and contrast existing classifications within the data, as well as to discover possible new relationships among covariates and phenotypes. They also show that PRRR is able to identify the distinct transcriptional characteristics of specific cell types and groups of cell types, and that PRRR could be used to identify marker genes for cell types.
+
+\subsection*{Analyzing gene expression patterns in spatial datasets}
+Along with cell type, the physical organization of cells within a tissue has a strong impact on gene expression due to tissue organization structure and cell-cell communication. The rise of spatial gene expression profiling technologies provides an opportunity to study how gene expression levels vary spatially across a tissue~\citep{stickels2021highly,staahl2016visualization,rodriques2019slide,lee2021xyzeq}. In particular, given gene expression data at the individual cell level with appropriate spatial context, it is of interest to identify how the expression of specific genes varies across the expanse of a tissue. 
+
+To study this with our modeling framework, we fit PRRR with rank $R=1$ to a two-dimensional spatial dataset containing 2,063 mouse brain sagittal anterior cells~\citep{10xVisium}. The $\mathbf{X}$ matrix is an $N \times 2$ matrix containing two-dimensional spatial coordinates for each cell $n$, and we treat the response variable $\mathbf{Y}$ as the matrix of RNA transcript counts. After fitting PRRR, we extracted the model coefficients to inspect the spatial trends in gene expression that it identified.
+
+We found that PRRR model is able to identify trends in gene expression along one latent dimension. While the model is constrained to only identify linear changes in gene expression across space, it is able to identify a general trend in increased gene expression for individual genes such as \emph{TTR} and \emph{FABP7} (Figure ~\ref{fig:spatial}). This result demonstrates the utility of our model in the context of spatial genomics and further demonstrates the versatility of PRRR.
+
+\subsection*{eQTL mapping}
+eQTL mapping is a common approach to finding associations between a genotypes and gene expression profiles. However, this type of association mapping requires fitting a regression between millions of genotype variants and the expression of tens of thousands of genes, resulting in billions of univariate models~\citep{aguet2017genetic}. The large number of univariate tests can cause these approaches to be prohibitive computationally and to lack sufficient statistical power. 
+
+We hypothesized that our reduced-rank regression model could alleviate these issues of computational tractability and statistical power. To test this, we applied PRRR to an eQTL mapping setting to find a set of low-dimensional factors that capture the relationships between genotype and gene expression. To do so, we used data from the Genotype Tissue Expression (GTEx) Consortium~\citep{gtex2020gtex}. For this experiment, we focused on data collected from liver tissues from $227$ donors. For each donor, the data consist of paired genotype (as encoded by minor allele count $\mathbf{x}_n \in \{0, 1, 2\}$) and bulk gene expression profiles. For our analysis, we used genotype data from chromosome 1 ($p=18,892$) and expression levels for the top $q=5,000$ most variable genes.
+
+We fit PRRR with $R=10$ latent dimensions and extracted the low-rank regression coefficient matrix (\autoref{fig:heatmap_fig}a, b). Within each factor, we can examine associations between individual genetic variants and the expression of individual genes. For factor number $r$, we do this by taking the outer product of the corresponding columns of $\mathbf{U}$ and $\mathbf{V}$, respectively. That is, we compute $\mathbf{u}_r \mathbf{v}_r^\top$ and examine the strongest SNP-gene relationships (\autoref{fig:gtex_eqtl_boxplots}). Investigating the latent factors more closely, we found several meaningful associations. For example, after performing a gene set enrichment analysis, we found that the gene expression loadings for factor 9 were enriched for genes related to \emph{interferon gamma response} and \emph{inflammatory response} (\autoref{fig:heatmap_fig}c), two major functional roles of liver cells~\citep{horras2011regulation,robinson2016liver}.
+We find similar results for nn-PRRR, although the $\mathbf{V}$ matrix is much more sparse (Supplementary Figure 5). 
+% \autoref{fig:heatmap_fig_prrr}). 
+The additional sparsity in the nn-PRRR results aligns well with the parts-based representation of the low-dimensional space known with nonnegative matrix factorizations~\citep{lee1999learning,donoho2003does,townes2021}.
+This experiment suggests that the PRRR and nn-RRR framework may be useful for studying associations between genotypes and phenotypes, especially when there is low-dimensional correlation structure between the datasets and within each dataset individually.
+
+\section*{Discussion}
+In this paper, we present two reduced-rank regression models and associated variational inference approaches --- Poisson RRR (PRRR) and nonnegative Poisson RRR (nn-PRRR) --- to jointly model associations within two high-dimensional paired sets of features where the response variables are counts.  In simulations, PRRR and nn-PRRR are able to effectively capture associations between paired high-dimensional data. Moreover, we show that these models are robust to high-dimensional data, and can identify the optimal rank for the parameter matrix. In the context of sequencing data, we find that PRRR and nn-PRRR may be used for robust identification of cell types, quantifying the relationships between cell types, and performing association mapping of genetic variants to correlated genes. 
+
+Several extensions of the model could be considered. A nonparametric prior could allow for flexibly learning the rank of the parameter matrix, rather than requiring the rank to be pre-specified, as in related work~\citep{valente2015nonparametric}. Additionally, the generalized model could be extended to different likelihood distributions. Furthermore, additional structure could be added to the latent variables, such as sparsity or a gene network~\citep{engelhardt2014bayesian, elyanow2020netnmf}, to encode additional known structure in the covariates. 
+
+\section*{Conclusions}
+We present a Poisson reduced-rank regression (PRRR) model, along with a nonnegative counterpart called nn-PRRR, for association mapping in count-based sequencing data. PRRR is able to detect associations between a high-dimensional response matrix and a high-dimensional set of predictors by leveraging low-dimensional representations of the data. Using principled Bayesian modeling, PRRR is able to properly account for the count-based nature of single-cell RNA sequencing data using a Poisson likelihood. We ensure that inference is tractable and efficient in these models by applying a fast variational inference approach.
+
+\section*{Declarations}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Backmatter begins here                   %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{backmatter}
+
+\section*{Acknowledgements}%% if any
+We thank Ariel Gewirtz and Isabella Grabski for helpful conversations.
+
+\section*{Funding}%% if any
+This work was funded by Helmsley Trust grant AWD1006624, NIH NCI 5U2CCA233195, NIH NHLBI R01 HL133218, and NSF CAREER AWD1005627.
+
+\section*{Abbreviations}%% if any
+RRR: reduced-rank regression \\
+PRRR: Poisson reduced-rank regression \\
+nn-PRRR: nonnegative Poisson reduced-rank regression
+eQTLs: expression quantitative trait loci \\
+MLE: Maximum likelihood estimate \\
+MAP: Maximum \emph{a posteriori} \\
+
+\section*{Availability of data and materials}%% if any
+\subsection*{Data}
+\begin{itemize}
+    \item Pancreas scRNA-seq data were downloaded from GEO (GSE84133). \href{https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE84133}{Link}.
+    \item GTEx bulk gene expression and SNP data were downloaded from the GTEx portal. \href{https://gtexportal.org/home/datasets}{Link}.
+    \item Spatial gene expression data were downloaded from the 10x Genomics ``Datasets'' page. \href{https://www.10xgenomics.com/resources/datasets?query=&page=1&configure%5Bfacets%5D%5B0%5D=chemistryVersionAndThroughput&configure%5Bfacets%5D%5B1%5D=pipeline.version&configure%5BhitsPerPage%5D=500&menu%5Bproducts.name%5D=}{Link}.
+\end{itemize}
+
+\subsection*{Code}
+Code is available at \url{https://github.com/tianafitz/PRRR}.
+
+\section*{Ethics approval and consent to participate}%% if any
+N/A
+
+\section*{Competing interests}
+BEE is on the SAB of Creyon Bio, Arrepath, and Freenome.
+
+\section*{Consent for publication}%% if any
+N/A
+
+\section*{Authors' contributions}
+TF, AJ, and BEE designed the method. TF implemented the method and conducted data analysis. TF, AJ, and BEE analyzed the results. TF and AJ wrote the manuscript. TF, AJ, and BEE edited the manuscript.
+
+
+%\section*{Authors' information}%% if any
+%Text for this section\ldots
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                  The Bibliography                       %%
+%%                                                         %%
+%%  Bmc_mathpys.bst  will be used to                       %%
+%%  create a .BBL file for submission.                     %%
+%%  After submission of the .TEX file,                     %%
+%%  you will be prompted to submit your .BBL file.         %%
+%%                                                         %%
+%%                                                         %%
+%%  Note that the displayed Bibliography will not          %%
+%%  necessarily be rendered by Latex exactly as specified  %%
+%%  in the online Instructions for Authors.                %%
+%%                                                         %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% if your bibliography is in bibtex format, use those commands:
+\bibliographystyle{bmc-mathphys} % Style BST file (bmc-mathphys, vancouver, spbasic).
+\bibliography{bmc_article}      % Bibliography file (usually '*.bib' )
+% for author-year bibliography (bmc-mathphys or spbasic)
+% a) write to bib file (bmc-mathphys only)
+% @settings{label, options="nameyear"}
+% b) uncomment next line
+%\nocite{label}
+
+% or include bibliography directly:
+% \begin{thebibliography}
+% \bibitem{b1}
+% \end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Figures                       %%
+%%                               %%
+%% NB: this is for captions and  %%
+%% Titles. All graphics must be  %%
+%% submitted separately and NOT  %%
+%% included in the Tex document  %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
+%% Do not use \listoffigures as most will included as separate files
+
+\section*{Figures}
+
+\begin{figure}%%[h!]
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure1.pdf}
+\caption{\csentence{Illustration of PRRR.} We fit PRRR to a toy dataset containing two cell-specific covariates and two genes. The two covariates showed negative correlation, and the two genes were jointly associated with the covariates (panel A). PRRR identifies the low-rank structure of these multivariate relationships by decomposing the full coefficient matrix into two low-rank matrices, $A$ and $B$ (panels B and C).}
+\label{fig:fig1}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure2.pdf}
+\caption{\csentence{eQTL mapping in simulated single-cell data with PRRR.} Toy example demonstrating eQTL mapping with PRRR for two genetic variants and two genes. 
+(a) Genotype data, shown as the number of copies of the minor allele for variant 1 (x-axis) and variant 2 (y-axis) and colored by each sample's corresponding expression of gene 1. 
+(b) Gene expression values. The red line represents the fitted value for $\mathbf{V}$ with $r=1$ in this toy example for gene 1 (x-axis) and gene 2 (y-axis).
+(c) Relationship between genotype (x-axis) and gene expression (y-axis) for the two genes.
+}
+\label{fig:toy_example_sceqtl}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.95\textwidth]{./figure3.pdf}
+\caption{\csentence{PRRR identifies optimal rank and is robust to data dimension.} 
+(a) Using synthetic data generated under the PRRR model with a true rank of $R^\star = 3$, we fit PRRR with a range of rank specifications on the x-axis, where $R^{\star} = 3$. The y-axis shows the ELBO values for each model rank. Vertical ticks represent $95\%$ confidence intervals.
+(b) Goodness-of-fit $R^2$ values for predictions from PRRR, a full-rank version of PRRR, and a multi-output LASSO model~\citep{friedman2010note} for outcome data with dimension $Q \in \{10, 50, 100\}$.
+(c) Goodness-of-fit $R^2$ values for predictions from PRRR, nn-PRRR, and competing models for outcome data generated from Splatter~\citep{zappia2017splatter}.
+}
+\label{fig:rank_recovery_and_highdim_prediction}
+\end{figure}
+
+\begin{figure}%[h!]
+\centering
+% \includegraphics[width=0.95\textwidth]{./figure4.pdf}
+\caption{\csentence{PRRR is robust to rank misspecification.} Using synthetic data generated from the PRRR model with a true rank of $R^\star = 3$, we fit PRRR with a range of rank specifications ($x$-axis). We made predictions for a held-out dataset and computed the $R^2$ coefficient of determination, repeating this ten times for each rank. The $y$-axis shows the $R^2$ value between the predicted values and the true values on held-out samples. Boxes show the median and upper and lower quartiles, and whiskers extend to $1.5$ times the interquartile range. (a) Maximum \emph{a posteriori} estimates (MAP); (b) Variational inference (VI); (c) Comparison with Gaussian RRR~\citep{anderson1951estimating} and LASSO~\citep{friedman2010note}.
+}
+\label{fig:prediction_figure}
+\end{figure}
+
+\begin{figure}%[h!]
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure5.png}
+\caption{\csentence{PRRR coefficients for pancreatic cell types.} Heatmap showing the full coefficient matrix $\mathbf{U} \mathbf{V}^\top$, with cell types on the rows and genes on the columns.}
+\label{fig:coeff_matrix_grrr_heatmap}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure6.png}
+\caption{\csentence{PRRR identifies similar expression patterns in islet cell types.} Shown here is the latent encoding of each cell type for each pair of latent variables in $\mathbf{U}$, where PRRR was fitted with $R=5$
+Each point in each subplot represents a cell type, and cell types are colored by whether they are classified as islet cells or not. The densities on the diagonal show the distribution of $\mathbf{U}$ values for islet and non-islet cell types in each latent dimension.
+}
+\label{fig:pairplot_grrr_5x5}
+\end{figure}
+
+\begin{figure}%[h!]
+\centering
+% \includegraphics[width=0.95\textwidth]{./figure7.pdf}
+\caption{\csentence{PRRR factors identify subgroups of cell types.} (a) shows each cell type's loading onto each of the five latent factors in the $\mathbf{U}$ matrix. (b) shows a gene set enrichment analysis of the gene loadings onto factors 2 and 4 in the $\mathbf{V}$ matrix.}
+\label{fig:pancreas_factor_loadings_figure}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure8.png}
+\caption{\csentence{PRRR identifies directional patterns in spatial gene expression data.} We applied PRRR to a Visium spatial gene expression readout from the sagittal anterior region of a mouse brain, using each spot's spatial coordinates as the covariates and each spot's gene expression levels as the outcome. Left: Spatial gene expression data for the gene \emph{TTR} and PRRR's estimated spatial pattern for this gene. Right: Spatial gene expression data for the gene \emph{FABP7} and PRRR's estimated spatial pattern for this gene.
+}
+\label{fig:spatial}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure9.pdf}
+\caption{\csentence{PRRR loadings matrices for the GTEx eQTL experiment.} (a) A heatmap representation of the matrix $\mathbf{U},$ showing SNPs on the rows and latent dimensions on the columns. (b) A heatmap representation of the matrix $\mathbf{V},$ showing genes on the rows and latent dimensions on the columns. (c) Gene set enrichment analysis (GSEA) of component 9 in $\mathbf{V}$.
+}
+\label{fig:heatmap_fig}
+\end{figure}
+
+\begin{figure}%[h!] 
+\centering
+% \includegraphics[width=0.9\textwidth]{./figure10.png}
+\caption{\csentence{Three eQTL associations found in one latent factor of PRRR applied to GTEx liver samples.}
+}
+\label{fig:gtex_eqtl_boxplots}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Tables                        %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Use of \listoftables is discouraged.
+%%
+\section*{Tables}
+\begin{table}[]
+\footnotesize
+\begin{tabular}{|| c | c | c | c | c ||}
+\hline
+ Factor &                           Pathway &  Adjusted p-val &      NES &                           Leading edge \\
+\hline
+\hline
+      1 &               ALLOGRAFT REJECTION &        7.16e-05 & 1.15e+00 &      \emph{FLNA},\emph{KRT1},\emph{RPS3A} \\
+      1 &                   APICAL JUNCTION &        1.13e-03 & 1.13e+00 &      \emph{ACTB},\emph{MYL9},\emph{ACTG1} \\
+      1 & EMT &        5.32e-07 & 1.18e+00 &       \emph{FN1},\emph{FLNA},\emph{TAGLN} \\
+      1 &                           HYPOXIA &        1.29e-03 & 1.12e+00 &        \emph{DCN},\emph{ANXA2},\emph{FOS} \\
+      1 &                    MYC TARGETS V1 &        1.80e-03 & 1.12e+00 &      \emph{RPLP0},\emph{RPS6},\emph{RPS2} \\
+      1 &                        MYOGENESIS &        3.91e-06 & 1.17e+00 &      \emph{MYH11},\emph{TAGLN},\emph{GSN} \\
+      1 &                       P53 PATHWAY &        2.61e-03 & 1.12e+00 &     \emph{PERP},\emph{RACK1},\emph{TXNIP} \\
+      1 &           TNFA SIG. VIA NFKB &        6.57e-03 & 1.11e+00 &       \emph{FOS},\emph{DUSP1},\emph{CD44} \\
+      7 &                   APICAL JUNCTION &        1.79e-05 & 1.20e+00 &       \emph{MYL9},\emph{MYH9},\emph{ACTB} \\
+      7 &                         APOPTOSIS &        8.01e-06 & 1.23e+00 &         \emph{DCN},\emph{GPX3},\emph{GSN} \\
+      7 &                       COAGULATION &        3.60e-07 & 1.27e+00 &        \emph{A2M},\emph{FN1},\emph{SPARC} \\
+      7 &                        COMPLEMENT &        3.83e-04 & 1.17e+00 &        \emph{FN1},\emph{CSRP1},\emph{CLU} \\
+      7 & EMT &        7.22e-12 & 1.29e+00 &      \emph{ACTA2},\emph{TAGLN},\emph{FN1} \\
+      7 &                           HYPOXIA &        2.62e-05 & 1.19e+00 &         \emph{MYH9},\emph{DCN},\emph{BGN} \\
+      7 &               IL2 STAT5 SIGNALING &        7.48e-03 & 1.13e+00 &    \emph{COL6A1},\emph{AHNAK},\emph{TGM2} \\
+      7 &                   MITOTIC SPINDLE &        1.39e-03 & 1.15e+00 &        \emph{FLNA},\emph{MYH9},\emph{GSN} \\
+      7 &                    MYC TARGETS V1 &        1.20e-03 & 1.15e+00 &  \emph{HSP90AB1},\emph{RPS6},\emph{RPLP0} \\
+      7 &                        MYOGENESIS &        2.45e-11 & 1.29e+00 &   \emph{TAGLN},\emph{MYH11},\emph{COL6A2} \\
+      7 &           TNFA SIG. VIA NFKB &        1.39e-03 & 1.15e+00 &     \emph{NR4A1},\emph{RHOB},\emph{ZFP36} \\
+      7 &                    UV RESPONSE DN &        1.91e-03 & 1.17e+00 & \emph{COL1A2},\emph{IGFBP5},\emph{COL3A1} \\
+\hline
+\end{tabular}
+\caption{\textbf{Gene set enrichment results for GTEx eQTL experiment.} \emph{EMT} stands for epithelial mesenchymal transition.}
+\end{table}
+
+% \begin{table}%[h!]
+% \caption{Sample table title. This is where the description of the table should go}
+%   \begin{tabular}{cccc}
+%     \hline
+%     & B1  &B2   & B3\\ \hline
+%     A1 & 0.1 & 0.2 & 0.3\\
+%     A2 & ... & ..  & .\\
+%     A3 & ..  & .   & .\\ \hline
+%   \end{tabular}
+% \end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                               %%
+%% Additional Files              %%
+%%                               %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Additional Files}
+  \subsection*{Additional file 1 --- supplementary\_figures}
+    Supplementary figures.
+
+  \subsection*{Additional file 2 --- supplementary\_text}
+    Supplementary text.
+
+\end{backmatter}
+\end{document}

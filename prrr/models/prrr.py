@@ -6,6 +6,7 @@ import numpy as np
 import seaborn as sns
 
 import tensorflow.compat.v2 as tf
+# import tensorflow as tf
 import tensorflow_probability as tfp
 
 from tensorflow_probability import distributions as tfd
@@ -15,7 +16,7 @@ from tensorflow_probability import bijectors as tfb
 from scipy.stats import multivariate_normal
 
 
-tf.enable_v2_behavior()
+# tf.enable_v2_behavior()
 
 warnings.filterwarnings("ignore")
 
@@ -37,6 +38,16 @@ class PRRR:
             name="V",
         )
 
+        # # Intercept (multiplicative in this case)
+        # v0 = yield tfd.Gamma(
+        #     concentration=tf.ones([1, self.q]),
+        #     rate=tf.ones([1, self.q]),
+        #     name="v0",
+        # )
+        # v0 = tf.ones([1, self.q])
+
+        # predicted_rate = tf.multiply(tf.matmul(tf.matmul(X, U), V), v0)
+
         # Intercept (multiplicative in this case)
         v0 = yield tfd.Gamma(
             concentration=tf.ones([1, self.q]),
@@ -47,27 +58,37 @@ class PRRR:
 
         predicted_rate = tf.multiply(tf.matmul(tf.matmul(X, U), V), v0)
 
-        if self.size_factors is not None:
+        if self.use_total_counts_as_size_factors:
+            size_factors = yield tfd.LogNormal(loc=self.Y_mean, scale=self.Y_stddev)
+            predicted_rate = tf.multiply(predicted_rate, size_factors)
+
+        elif self.size_factors is not None:
             predicted_rate = tf.multiply(predicted_rate, self.size_factors)
 
         Y = yield tfd.Poisson(rate=predicted_rate, name="Y")
 
     def fit(self, X, Y, size_factors=None, use_total_counts_as_size_factors=True, use_vi=True, n_iters=2_000, learning_rate=1e-2):
 
+        self.use_total_counts_as_size_factors = use_total_counts_as_size_factors
+
         assert X.shape[0] == Y.shape[0]
         self.n, self.p = X.shape
         _, self.q = Y.shape
         if use_total_counts_as_size_factors and size_factors is None:
-            size_factors = np.sum(Y, axis=1).astype(float).reshape(-1, 1)
-        self.size_factors = size_factors
+            # size_factors = np.sum(Y, axis=1).astype(float).reshape(-1, 1)
+            self.size_factors = None
+            self.Y_mean = np.mean(Y, axis=1).astype(np.float32).reshape(-1, 1)
+            self.Y_stddev = np.std(Y, axis=1).astype(np.float32).reshape(-1, 1)
+
+
         X = X.astype("float32")
 
         rrr_model = functools.partial(self.prrr_model, X=X)
 
         model = tfd.JointDistributionCoroutineAutoBatched(rrr_model)
 
-        def target_log_prob_fn(U, V, v0):
-            return model.log_prob((U, V, v0, Y))
+        def target_log_prob_fn(U, V, v0, size_factors):
+            return model.log_prob((U, V, 0, size_factors, Y))
 
         if use_vi:
             # ------- Specify variational families -----------
@@ -153,14 +174,19 @@ class PRRR:
                 bijector=tfb.Softplus()
             )
 
+            size_factors = tfp.util.TransformedVariable(
+                tf.ones(shape=[self.n, 1]),
+                bijector=tfb.Softplus()
+            )
+
             optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 
-            trace_fn = lambda traceable_quantities: {'loss': traceable_quantities.loss, 'U': U, 'V': V, 'v0': v0}
+            # trace_fn = lambda traceable_quantities: {'loss': traceable_quantities.loss, 'U': U, 'V': V, 'v0': v0, 'size_factors': size_factors}
             losses = tfp.math.minimize(
-                lambda: -target_log_prob_fn(U, V, v0),
+                lambda: -target_log_prob_fn(U, V, v0, size_factors),
                 optimizer=optimizer,
                 num_steps=n_iters,
-                trace_fn=trace_fn,
+                # trace_fn=trace_fn,
             )
             
 
@@ -170,6 +196,7 @@ class PRRR:
                 "U": U,
                 "V": V,
                 "v0": v0,
+                "size_factors": size_factors,
             }
 
         return

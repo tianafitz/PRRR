@@ -50,7 +50,7 @@ run_fisher_exact_gsea <- function(gsc_file, hit_genes, all_genes, gsc = NULL) {
 #'
 #' Runs a permutation test to see whether certain gene sets have high or lower stat values (e.g., differential expression) than expected.
 #'
-run_permutation_gsea <- function(gsc_file, gene_stats, nperm = 1000, gsc = NULL) {
+run_permutation_gsea <- function(gsc_file, gene_stats, nperm = 1000, gsc = NULL, eps = 1e-10) {
   library(magrittr)
   
   if (!is.null(gsc)) {
@@ -58,6 +58,7 @@ run_permutation_gsea <- function(gsc_file, gene_stats, nperm = 1000, gsc = NULL)
     gsea_out <- fgsea::fgseaMultilevel(
       pathways = gsc$gsc,
       stats = gene_stats,
+      eps = eps,
       # nperm = nperm
     )
   } else {
@@ -68,6 +69,7 @@ run_permutation_gsea <- function(gsc_file, gene_stats, nperm = 1000, gsc = NULL)
     gsea_out <- fgsea::fgseaMultilevel(
       pathways = gsc$gsc,
       stats = gene_stats,
+      eps = eps,
       # nperm = nperm
     )
   }

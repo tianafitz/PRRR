@@ -1,0 +1,116 @@
+%% BioMed_Central_Tex_Template_v1.06
+%%                                      %
+%  bmc_article.tex            ver: 1.06 %
+%                                       %
+
+%%IMPORTANT: do not delete the first line of this template
+%%It must be present to enable the BMC Submission system to
+%%recognise this template!!
+
+%\documentclass[twocolumn]{bmcart}% uncomment this for twocolumn layout and comment line below
+\documentclass{bmcart}
+
+%%% Load packages
+\usepackage{amsthm,amsmath}
+\RequirePackage[numbers]{natbib}
+% \RequirePackage[authoryear]{natbib}% uncomment this for author-year bibliography
+% \RequirePackage{hyperref}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc} %unicode support
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{amsfonts}
+\usetikzlibrary{automata,positioning}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{arrows,automata}
+\usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{bayesnet}
+\usetikzlibrary{arrows}
+
+%\usepackage[applemac]{inputenc} %applemac support if unicode package fails
+%\usepackage[latin1]{inputenc} %UNIX support if unicode package fails
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                             %%
+%%  If you wish to display your graphics for   %%
+%%  your own use using includegraphic or       %%
+%%  includegraphics, then comment out the      %%
+%%  following two lines of code.               %%
+%%  NB: These line *must* be included when     %%
+%%  submitting to BMC.                         %%
+%%  All figure files must be submitted as      %%
+%%  separate graphics through the BMC          %%
+%%  submission process, not included in the    %%
+%%  submitted article.                         %%
+%%                                             %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \def\includegraphic{}
+% \def\includegraphics{}
+
+%%% Put your definitions there:
+\startlocaldefs
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\endlocaldefs
+
+%%% Begin ...
+\begin{document}
+
+
+\title{Supplementary text}
+\date{\vspace{-3ex}}
+\maketitle
+
+\section*{Appendix}
+\subsection{RRR}
+The optimization problem for reduced-rank regression (RRR) is
+\begin{align*}
+    &\min_{\mathbf{B}} \|\mathbf{Y} - \mathbf{X}\mathbf{B}\|_2^2 \\
+    &\text{subject to } \rank(\mathbf{B}) \leq R,
+\end{align*}
+where $\mathbf{X}$ is an $N \times P$ matrix of covariates, $\mathbf{Y}$ is an $N \times Q$ matrix of outcomes, and $\mathbf{B}$ is a $P \times Q$ coefficient matrix with rank at most $R$. When $R=\min(P, Q)$, we have the OLS solution,
+\begin{equation*}
+    \widehat{\mathbf{B}}_{OLS}=(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y}.
+\end{equation*}
+We can write the RRR optimization program in terms of the OLS solution:
+\begin{align}\label{eq:rrr_ols}
+    &\min_\mathbf{B} \|\mathbf{Y} - \mathbf{X}\widehat{\mathbf{B}}_{OLS}\|_2^2 + \|\mathbf{X} \widehat{\mathbf{B}}_{OLS} - \mathbf{X}\mathbf{B}\|_2^2 \\ 
+    &\text{subject to } \rank(\mathbf{B}) \leq R. \nonumber
+\end{align}
+To see that these are equivalent, we can expand the loss function as follows.
+\begin{align*}
+    &\|\mathbf{Y} - \mathbf{X}\widehat{\mathbf{B}}_{OLS}\|_2^2 + \|X\widehat{\mathbf{B}}_{OLS} - \mathbf{X}\mathbf{B}\|_2^2 \\ 
+    =& \|\mathbf{Y} - \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y}\|_2^2 + \|\mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} - \mathbf{X}\mathbf{B}\|_2^2 \\
+    =& \mathbf{Y}^\top \mathbf{Y} - 2 \mathbf{Y}^\top \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} + 2 \mathbf{Y}^\top \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} \\
+    &~~- \mathbf{Y}^\top \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X}\mathbf{B} - \mathbf{B}^\top \mathbf{X}^\top \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} + \mathbf{B}^\top \mathbf{X}^\top \mathbf{X} \mathbf{B} \\
+    =& \mathbf{Y}^\top \mathbf{Y} - \mathbf{Y}^\top \mathbf{X} \mathbf{B} - \mathbf{B}^\top \mathbf{X}^\top \mathbf{Y} + \mathbf{B}^\top \mathbf{X}^\top \mathbf{X} \mathbf{B} \\
+    =& (\mathbf{Y}-\mathbf{X}\mathbf{B})^\top (\mathbf{Y}-\mathbf{X}\mathbf{B}) \\
+    =& \|\mathbf{Y}-\mathbf{X}\mathbf{B}\|_2^2.
+\end{align*}
+Now, the first term in the minimization problem in Equation \eqref{eq:rrr_ols} does not depend on $B$, so the problem becomes
+\begin{equation*}
+    \min_\mathbf{B} \|\mathbf{X}\widehat{\mathbf{B}}_{OLS} - \mathbf{X}\mathbf{B}\|_2^2.
+\end{equation*}
+Rewriting the objective, we have
+\begin{equation*}
+    \min_\mathbf{B} \|\mathbf{X}\widehat{\mathbf{B}}_{OLS} - \mathbf{X}\widehat{\mathbf{B}}_{OLS} \mathbf{B}\|_2^2.
+\end{equation*}
+Now, we can notice that this problem aligns with PCA. Let 
+$$\boldsymbol{\Sigma}_n = (\mathbf{X}\widehat{\mathbf{B}}_{OLS})^\top \mathbf{X}\widehat{\mathbf{B}}_{OLS} = \widehat{\mathbf{B}}_{OLS}^\top \mathbf{X}^\top \mathbf{X}\widehat{\mathbf{B}}_{OLS}=\mathbf{U}\Lambda \mathbf{U}^\top$$
+be the eigenvalue decomposition of the covariance of the fitted values. Then we have
+\begin{equation*}
+    \widehat{\mathbf{B}}_{RRR} = \mathbf{U}_k,
+\end{equation*}
+where $\mathbf{U}_k=[\mathbf{u}_1,\cdots,\mathbf{u}_k]$ contains the eigenvectors corresponding to the top $k$ eigenvalues.
+
+\subsection{GTEx metadata experiments}
+\label{appendix:}
+In an attempt to explore the organization of PRRR's low-dimensional space, we ran the model on a dataset containing gene expression counts along with patient metadata including height, weight, underlying conditions, and demographics. We wanted to study how features in the metadata are correlated with each other and with gene expression by analyzing the lower-dimensional matrices produced by the model. We were unable to recognize any apparent associations in the low-dimensional space, likely due to the small number of samples present in the data (about 200), and even less of these had all metadata points present.
+
+
+
+
+\end{document}

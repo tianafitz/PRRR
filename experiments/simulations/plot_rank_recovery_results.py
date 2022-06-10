@@ -10,12 +10,13 @@ from plottify import autosize
 
 import matplotlib
 
-font = {"size": 20}
+font = {"size": 30}
 matplotlib.rc("font", **font)
 matplotlib.rcParams["text.usetex"] = True
 
 
-plt.figure(figsize=(7, 5))
+plt.figure(figsize=(8, 5))
+
 
 # plt.title("MLE")
 results_df = pd.read_csv("./out/rank_recovery_experiment.csv", index_col=0)

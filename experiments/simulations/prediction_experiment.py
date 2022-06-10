@@ -6,10 +6,14 @@ import seaborn as sns
 from os.path import join as pjoin
 import sys
 from sklearn.metrics import r2_score
+import subprocess
+import os
+import glob
 
 sys.path.append("../../prrr/models/")
 from grrr import GRRR
 from prrr import PRRR
+from gaussian_rrr import GaussianRRR
 
 ## Create synthetic data
 n = 200
@@ -17,14 +21,19 @@ p = 20
 q = 20
 r_true = 3
 frac_train = 0.8
-USE_VI = True
+USE_VI = False
 
-model = "PRRR"
-data_generating_model = "PRRR"
+model = "GRRR"
+data_generating_model = "GRRR"
+
+def centered_r2_score(y_test, preds):
+    return r2_score(y_test - y_test.mean(0), preds - preds.mean(0))
 
 n_repeats = 2
-latent_dim_list = [1, 2, 3, 4, 5, 10, 20]
+latent_dim_list = [1, 2, 3, 4, 5, 10, min(p, q)]
 results = np.zeros((n_repeats, len(latent_dim_list)))
+results_gaussrrr = np.zeros((n_repeats, len(latent_dim_list)))
+results_glmnet = np.zeros(n_repeats)
 
 for ii in range(n_repeats):
 
@@ -42,8 +51,8 @@ for ii in range(n_repeats):
 
         X = np.random.uniform(low=0, high=6, size=(n, p))
         size_factors = np.ones((n, 1))
-        U_true = np.random.gamma(1., size=(p, r_true))
-        V_true = np.random.gamma(1., size=(r_true, q))
+        U_true = np.random.gamma(1.0, size=(p, r_true))
+        V_true = np.random.gamma(1.0, size=(r_true, q))
 
         Y_mean = X @ U_true @ V_true
         Y = np.random.poisson(Y_mean)
@@ -81,31 +90,91 @@ for ii in range(n_repeats):
         else:
             U_est = model_object.param_dict["U"].numpy()
             V_est = model_object.param_dict["V"].numpy()
-        
 
         if model == "GRRR":
             test_preds = np.exp(X_test @ U_est @ V_est + np.log(size_factors_test))
         elif model == "PRRR":
             test_preds = X_test @ U_est @ V_est
 
-        curr_r2 = r2_score(y_test, test_preds)
+        curr_r2 = centered_r2_score(y_test, test_preds)
         print(latent_dim, flush=True)
         print(curr_r2, flush=True)
         print("\n", flush=True)
         results[ii, jj] = curr_r2
 
-        # plt.scatter(y_test[:, 0], test_preds[:, 0])
-        # plt.show()
-        # import ipdb; ipdb.set_trace()
+        ## Gaussian RRR
+        model_object = GaussianRRR(latent_dim=latent_dim)
+        model_object.fit(
+            X=X_train,
+            Y=np.log(y_train + 1),
+            use_vi=USE_VI,
+            n_iters=1000,
+            learning_rate=1e-2,
+            size_factors=size_factors_train,
+            # size_factors=np.zeros((len(X_train), 1)),
+        )
 
-results_df = pd.melt(pd.DataFrame(results, columns=latent_dim_list))
+        U_est = model_object.param_dict["U"].numpy()
+        V_est = model_object.param_dict["V"].numpy()
+        v0_est = model_object.param_dict["v0"].numpy()
+        test_preds = X_test @ U_est @ V_est + v0_est
+        # import ipdb; ipdb.set_trace()
+        
+        curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
+        print(curr_r2, flush=True)
+        print("\n", flush=True)
+        results_gaussrrr[ii, jj] = curr_r2
+
+    ## Sparse Gaussian regression
+    files = glob.glob('./tmp/*')
+    for f in files:
+        os.remove(f)
+
+    pd.DataFrame(X_train).to_csv("./tmp/X_train.csv", index=False)
+    pd.DataFrame(X_test).to_csv("./tmp/X_test.csv", index=False)
+    pd.DataFrame(y_train).to_csv("./tmp/Y_train.csv", index=False)
+    pd.DataFrame(y_test).to_csv("./tmp/Y_test.csv", index=False)
+
+    process = subprocess.Popen(['Rscript', 'run_glmnet.R'])
+    process.wait()
+    test_preds = pd.read_csv("./tmp/glmnet_preds.csv", index_col=0).values
+
+    # import ipdb; ipdb.set_trace()
+    curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
+    print(curr_r2, flush=True)
+    print("\n", flush=True)
+    results_glmnet[ii] = curr_r2
+
+    files = glob.glob('./tmp/*')
+    for f in files:
+        os.remove(f)
+    # import ipdb; ipdb.set_trace()
+
+# import ipdb; ipdb.set_trace()
+results_df_rrr = pd.melt(pd.DataFrame(results, columns=latent_dim_list))
+results_df_rrr["method"] = "PRRR"
+results_df_gauss = pd.melt(pd.DataFrame(results_gaussrrr, columns=latent_dim_list))
+results_df_gauss["method"] = "Gaussian RRR"
+
+results_df_glmnet = pd.DataFrame({"variable": np.repeat([1, 20], 2), "value": np.tile(results_glmnet, 2)})
+# results_df_glmnet["variable"] = np.repeat([1, 20], 2)
+results_df_glmnet["method"] = "LASSO"
+
+results_df = pd.concat([results_df_rrr, results_df_gauss, results_df_glmnet], axis=0)
+results_df.index = np.arange(results_df.shape[0])
 results_df.to_csv(
-    "./out/prediction_experiment_results_{}{}.csv".format(model, "_VI" if USE_VI else "")
+    "./out/prediction_experiment_results_{}{}.csv".format(
+        model, "_VI" if USE_VI else ""
+    )
 )
-plt.figure(figsize=(5, 5))
-sns.boxplot(data=results_df, x="variable", y="value")
+plt.figure(figsize=(10, 5))
+# import ipdb; ipdb.set_trace()
+# sns.boxplot(data=results_df, x="variable", y="value")
+sns.lineplot(data=results_df, x="variable", y="value", hue="method")
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel("Rank")
 plt.ylabel("R^2")
+plt.tight_layout()
 plt.show()
 import ipdb
 
