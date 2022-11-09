@@ -10,14 +10,20 @@ __pycache__/
 *.png
 *.pdf
 *.svg
+job.slurm*
+
+data/
+!data/gtex_expression_thyroid.csv
+prrr_bmc_submission.zip
+experiments/trying.py
+
 scGeneFit-python-master/
 figures/
 # data/
-!data/gtex_expression_thyroid.csv
 bmc_submission/
-prrr_bmc_submission.zip
 .idea
 .ipynb_checkpoints/
 .Rhistory
-job.slurm*
+experiments/zeisel/
+experiments/pbmc/
 
