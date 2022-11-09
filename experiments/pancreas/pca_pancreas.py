@@ -30,6 +30,7 @@ PBMC_DATA_DIR = "../../data/pancreas"
 data_file = pjoin(PBMC_DATA_DIR, "pancreas_counts.h5ad")
 adata = sc.read_h5ad(data_file)
 
+
 def process_data(adata, n_top_genes=2000):
     adata.var_names_make_unique()
     # adata.var["mt"] = adata.var_names.str.startswith("MT-")
@@ -64,12 +65,14 @@ Y_reduced_df = pd.DataFrame(Y_reduced, columns=["PC1", "PC2"])
 Y_reduced_df["Cell type"] = cell_types[cell_types_ints]
 plt.figure(figsize=(10, 7))
 sns.scatterplot(data=Y_reduced_df, x="PC1", y="PC2", hue="Cell type")
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=20)
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize=20)
 plt.tight_layout()
 plt.savefig("./out/pancreas_pca_plot.png")
 plt.show()
 
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 
 latent_dim = 5
 grrr = GRRR(latent_dim=latent_dim)

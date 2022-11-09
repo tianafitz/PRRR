@@ -8,6 +8,8 @@ __pycache__/
 *.mtx
 *.txt
 *.png
+*.pdf
+*.svg
 scGeneFit-python-master/
 figures/
 # data/
@@ -15,4 +17,6 @@ figures/
 bmc_submission/
 prrr_bmc_submission.zip
 .idea
+.ipynb_checkpoints/
+.Rhistory
 

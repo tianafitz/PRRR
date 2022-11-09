@@ -98,13 +98,19 @@ class ReducedRankRidge(
 
 for ii in range(n_repeats):
 
-    process = subprocess.Popen(['Rscript', 'generate_splatter_data.R'])
+    process = subprocess.Popen(["Rscript", "generate_splatter_data.R"])
     process.wait()
 
-    group_df = pd.read_csv("~/Documents/beehive/rrr/PRRR/data/simulated/splatter_cell_types.csv", index_col=0)
+    group_df = pd.read_csv(
+        "~/Documents/beehive/rrr/PRRR/data/simulated/splatter_cell_types.csv",
+        index_col=0,
+    )
     X = pd.get_dummies(group_df.values.squeeze()).values.astype(float)
 
-    Y = pd.read_csv("~/Documents/beehive/rrr/PRRR/data/simulated/splatter_cell_types_gex.csv", index_col=0).values
+    Y = pd.read_csv(
+        "~/Documents/beehive/rrr/PRRR/data/simulated/splatter_cell_types_gex.csv",
+        index_col=0,
+    ).values
 
     assert len(X) == len(Y)
     n, p = X.shape
@@ -112,7 +118,7 @@ for ii in range(n_repeats):
     size_factors = np.ones((n, 1))
 
     # import ipdb; ipdb.set_trace()
-    # X =   
+    # X =
 
     # import ipdb; ipdb.set_trace()
     # Y = Y * np.random.choice([0, 1], p=[0.1, 0.9], size=Y.shape)
@@ -149,7 +155,7 @@ for ii in range(n_repeats):
     size_factors_est_test = linreg.predict(y_test.mean(1).reshape(-1, 1))
 
     test_preds = (X_test @ U_est @ V_est) * size_factors_est_test.reshape(-1, 1)
-    
+
     curr_r2 = centered_r2_score(y_test, test_preds)
     print("PRRR")
     print(curr_r2, flush=True)
@@ -179,9 +185,10 @@ for ii in range(n_repeats):
     size_factors_est_test = linreg.predict(y_test.mean(1).reshape(-1, 1))
 
     # test_preds = (X_test @ U_est @ V_est) * size_factors_est_test.reshape(-1, 1)
-    
 
-    test_preds = np.exp(X_test @ U_est @ V_est + np.log(size_factors_est_test.reshape(-1, 1)))
+    test_preds = np.exp(
+        X_test @ U_est @ V_est + np.log(size_factors_est_test.reshape(-1, 1))
+    )
     # test_preds = np.exp(X_test @ U_est @ V_est + np.log(size_factors_test))
 
     curr_r2 = centered_r2_score(y_test, test_preds)
@@ -225,7 +232,7 @@ for ii in range(n_repeats):
     v0_est = model_object.param_dict["v0"].numpy()
     test_preds = X_test @ U_est @ V_est + v0_est
     # import ipdb; ipdb.set_trace()
-    
+
     curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
     print(curr_r2, flush=True)
     print("\n", flush=True)
@@ -247,13 +254,18 @@ for ii in range(n_repeats):
     print(curr_r2, flush=True)
     print("\n", flush=True)
     results_fullrank[ii] = curr_r2
-    
+
     # import ipdb; ipdb.set_trace()
 
 
 results_df = pd.melt(
     pd.DataFrame(
-        {"PRRR": results_grrr, "nn-PRRR": results_prrr, "Gaussian\nRRR": results_gaussrrr, "Full-rank": results_fullrank}
+        {
+            "PRRR": results_grrr,
+            "nn-PRRR": results_prrr,
+            "Gaussian\nRRR": results_gaussrrr,
+            "Full-rank": results_fullrank,
+        }
         # {"PRRR": results_prrr, "Gaussian\nRRR": results_gaussrrr, "Full-rank": results_fullrank}
     )
 )

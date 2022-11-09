@@ -20,7 +20,7 @@ from poisson_glm import fit_poisson_regression
 n = 200
 p = 20
 # q_list = [10, 50, 100, 1_000] #, 10_000]
-dim_list = [10, 50, 100] #, 200] #, 10_000]
+dim_list = [10, 50, 100]  # , 200] #, 10_000]
 r_true = 5
 frac_train = 0.8
 USE_VI = False
@@ -28,8 +28,10 @@ USE_VI = False
 model = "GRRR"
 data_generating_model = "GRRR"
 
+
 def centered_r2_score(y_test, preds):
     return r2_score(y_test - y_test.mean(0), preds - preds.mean(0))
+
 
 n_repeats = 20
 results = np.zeros((n_repeats, len(dim_list)))
@@ -119,15 +121,14 @@ for ii in range(n_repeats):
         V_est = model_object.param_dict["V"].numpy()
         v0_est = model_object.param_dict["v0"].numpy()
         test_preds = X_test @ U_est @ V_est + v0_est
-        
+
         curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
         print(curr_r2, flush=True)
         print("\n", flush=True)
         results_fullrank[ii, jj] = curr_r2
 
-
         ## Sparse Gaussian regression (LASSO)
-        files = glob.glob('./tmp/*')
+        files = glob.glob("./tmp/*")
         for f in files:
             os.remove(f)
 
@@ -136,7 +137,7 @@ for ii in range(n_repeats):
         pd.DataFrame(y_train).to_csv("./tmp/Y_train.csv", index=False)
         pd.DataFrame(y_test).to_csv("./tmp/Y_test.csv", index=False)
 
-        process = subprocess.Popen(['Rscript', 'run_glmnet.R'])
+        process = subprocess.Popen(["Rscript", "run_glmnet.R"])
         process.wait()
         test_preds = pd.read_csv("./tmp/glmnet_preds.csv", index_col=0).values
 
@@ -145,7 +146,7 @@ for ii in range(n_repeats):
         print("\n", flush=True)
         results_glmnet[ii, jj] = curr_r2
 
-        files = glob.glob('./tmp/*')
+        files = glob.glob("./tmp/*")
         for f in files:
             os.remove(f)
 
@@ -167,7 +168,7 @@ plt.figure(figsize=(10, 5))
 # import ipdb; ipdb.set_trace()
 # sns.boxplot(data=results_df, x="variable", y="value")
 sns.lineplot(data=results_df, x="variable", y="value", hue="method")
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.xlabel(r"$q$")
 # plt.xscale("log")
 plt.ylabel("R^2")

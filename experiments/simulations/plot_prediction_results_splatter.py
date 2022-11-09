@@ -17,7 +17,9 @@ matplotlib.rcParams["text.usetex"] = True
 
 plt.figure(figsize=(7, 5))
 
-results_df = pd.read_csv("./out/prediction_experiment_results_methods_comparison_splatter.csv")
+results_df = pd.read_csv(
+    "./out/prediction_experiment_results_methods_comparison_splatter.csv"
+)
 sns.boxplot(data=results_df, x="variable", y="value")
 plt.xlabel("")
 plt.ylabel(r"$R^2$")

@@ -34,7 +34,9 @@ Y = adata.X[:, gene_idx]
 
 latent_dim = 5
 prrr = PRRR(latent_dim=latent_dim)
-prrr.fit(X=X, Y=Y, use_vi=False, use_total_counts_as_size_factors=True, n_iters=10_000) #10_000)
+prrr.fit(
+    X=X, Y=Y, use_vi=False, use_total_counts_as_size_factors=True, n_iters=10_000
+)  # 10_000)
 
 A_est = prrr.param_dict["U"].numpy()
 B_est = prrr.param_dict["V"].numpy()

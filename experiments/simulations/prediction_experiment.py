@@ -26,8 +26,10 @@ USE_VI = False
 model = "GRRR"
 data_generating_model = "GRRR"
 
+
 def centered_r2_score(y_test, preds):
     return r2_score(y_test - y_test.mean(0), preds - preds.mean(0))
+
 
 n_repeats = 2
 latent_dim_list = [1, 2, 3, 4, 5, 10, min(p, q)]
@@ -119,14 +121,14 @@ for ii in range(n_repeats):
         v0_est = model_object.param_dict["v0"].numpy()
         test_preds = X_test @ U_est @ V_est + v0_est
         # import ipdb; ipdb.set_trace()
-        
+
         curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
         print(curr_r2, flush=True)
         print("\n", flush=True)
         results_gaussrrr[ii, jj] = curr_r2
 
     ## Sparse Gaussian regression
-    files = glob.glob('./tmp/*')
+    files = glob.glob("./tmp/*")
     for f in files:
         os.remove(f)
 
@@ -135,7 +137,7 @@ for ii in range(n_repeats):
     pd.DataFrame(y_train).to_csv("./tmp/Y_train.csv", index=False)
     pd.DataFrame(y_test).to_csv("./tmp/Y_test.csv", index=False)
 
-    process = subprocess.Popen(['Rscript', 'run_glmnet.R'])
+    process = subprocess.Popen(["Rscript", "run_glmnet.R"])
     process.wait()
     test_preds = pd.read_csv("./tmp/glmnet_preds.csv", index_col=0).values
 
@@ -145,7 +147,7 @@ for ii in range(n_repeats):
     print("\n", flush=True)
     results_glmnet[ii] = curr_r2
 
-    files = glob.glob('./tmp/*')
+    files = glob.glob("./tmp/*")
     for f in files:
         os.remove(f)
     # import ipdb; ipdb.set_trace()
@@ -156,7 +158,9 @@ results_df_rrr["method"] = "PRRR"
 results_df_gauss = pd.melt(pd.DataFrame(results_gaussrrr, columns=latent_dim_list))
 results_df_gauss["method"] = "Gaussian RRR"
 
-results_df_glmnet = pd.DataFrame({"variable": np.repeat([1, 20], 2), "value": np.tile(results_glmnet, 2)})
+results_df_glmnet = pd.DataFrame(
+    {"variable": np.repeat([1, 20], 2), "value": np.tile(results_glmnet, 2)}
+)
 # results_df_glmnet["variable"] = np.repeat([1, 20], 2)
 results_df_glmnet["method"] = "LASSO"
 
@@ -171,7 +175,7 @@ plt.figure(figsize=(10, 5))
 # import ipdb; ipdb.set_trace()
 # sns.boxplot(data=results_df, x="variable", y="value")
 sns.lineplot(data=results_df, x="variable", y="value", hue="method")
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.xlabel("Rank")
 plt.ylabel("R^2")
 plt.tight_layout()

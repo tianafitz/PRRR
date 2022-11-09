@@ -53,14 +53,16 @@ g.legend_.set_title(None)
 g.lines[-1].set_linestyle("--")
 g.lines[2].set_linestyle("--")
 plt.xticks([1, 5, 10, 15, 20], [1, 5, 10, 15, "20\n(Full rank)"])
-plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.xlabel("Rank")
 plt.ylabel(r"$R^2$")
 plt.ylim([0, 1])
 plt.tight_layout()
 plt.savefig("./out/prediction_experiment_results_gauss_vs_prrr.png")
 plt.show()
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 
 sns.boxplot(data=results_df, x="variable", y="value")
 plt.xlabel("Rank")

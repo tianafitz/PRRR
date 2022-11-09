@@ -160,13 +160,15 @@ for ii in range(n_repeats):
     size_factors_est_test = linreg.predict(y_test.mean(1).reshape(-1, 1))
 
     test_preds = (X_test @ U_est @ V_est) * size_factors_est_test.reshape(-1, 1)
-    
+
     curr_r2 = centered_r2_score(y_test, test_preds)
     print("PRRR")
     print(curr_r2, flush=True)
     print("\n", flush=True)
     results_prrr[ii] = curr_r2
-    import ipdb; ipdb.set_trace()
+    import ipdb
+
+    ipdb.set_trace()
 
     ### GRRR
     model_object = GRRR(latent_dim=r_true)
@@ -225,7 +227,7 @@ for ii in range(n_repeats):
     v0_est = model_object.param_dict["v0"].numpy()
     test_preds = X_test @ U_est @ V_est + v0_est
     # import ipdb; ipdb.set_trace()
-    
+
     curr_r2 = centered_r2_score(np.log(y_test + 1), test_preds)
     print(curr_r2, flush=True)
     print("\n", flush=True)
@@ -247,13 +249,18 @@ for ii in range(n_repeats):
     print(curr_r2, flush=True)
     print("\n", flush=True)
     results_fullrank[ii] = curr_r2
-    
+
     # import ipdb; ipdb.set_trace()
 
 
 results_df = pd.melt(
     pd.DataFrame(
-        {"GRRR": results_grrr, "PRRR": results_prrr, "Gaussian\nRRR": results_gaussrrr, "Full-rank": results_fullrank}
+        {
+            "GRRR": results_grrr,
+            "PRRR": results_prrr,
+            "Gaussian\nRRR": results_gaussrrr,
+            "Full-rank": results_fullrank,
+        }
         # {"PRRR": results_prrr, "Gaussian\nRRR": results_gaussrrr, "Full-rank": results_fullrank}
     )
 )
